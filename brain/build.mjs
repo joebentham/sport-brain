@@ -59,7 +59,7 @@ function watchFor(chans, league, sport) {
   };
 }
 
-function normalize(ev, { sport, league, tier, team }) {
+function normalize(ev, { sport, league, tier, team, feed }) {
   const comp = ev.competitions?.[0];
   if (!comp || !ev.date) return null;
   const cs = comp.competitors || [];
@@ -73,6 +73,9 @@ function normalize(ev, { sport, league, tier, team }) {
     title: ev.shortName && sport !== 'soccer' && sport !== 'cricket' && sport !== 'rugby' ? ev.name : ev.name,
     detail: sport === 'cricket' ? (ev.description || '').split(',')[0] : null,
     home: home?.team?.displayName, away: away?.team?.displayName,
+    homeAbbr: home?.team?.abbreviation || null, awayAbbr: away?.team?.abbreviation || null,
+    // Scoreboard path the island app polls for live scores.
+    feed: feed || (sport === 'soccer' && ev.league?.slug ? `soccer/${ev.league.slug}` : null),
     start: new Date(ev.date).toISOString(),
     state: st.state || 'pre',
     statusText: comp.status?.summary || st.shortDetail || st.detail || '',
@@ -105,7 +108,7 @@ for (const [tier, list] of [[1, cfg.tier1], [2, cfg.tier2 || []]]) for (const t 
     }
   } else if (t.kind === 'teamSchedule') {
     const j = await get(`${BASE}/${t.path}/teams/${t.teamId}/schedule`);
-    for (const ev of j?.events || []) add(normalize(ev, { sport: t.path.split('/')[0], league: t.league, tier, team: t.name }));
+    for (const ev of j?.events || []) add(normalize(ev, { sport: t.path.split('/')[0], league: t.league, tier, team: t.name, feed: t.path }));
   } else if (t.kind === 'cricket') {
     const series = new Map((t.knownSeries || []).map(id => [id, null]));
     const panel = await get(`${BASE}/cricket/scorepanel`);
@@ -116,12 +119,12 @@ for (const [tier, list] of [[1, cfg.tier1], [2, cfg.tier2 || []]]) for (const t 
     for (const [id, name] of series) for (const m of months) {
       const j = await get(`${BASE}/cricket/${id}/scoreboard?dates=${m}`);
       const lname = name || j?.leagues?.[0]?.name || 'Cricket';
-      for (const ev of j?.events || []) if (isTeam(ev, t.name)) add(normalize(ev, { sport: 'cricket', league: lname, tier, team: t.name }));
+      for (const ev of j?.events || []) if (isTeam(ev, t.name)) add(normalize(ev, { sport: 'cricket', league: lname, tier, team: t.name, feed: `cricket/${id}` }));
     }
   } else if (t.kind === 'rugby') {
     for (const [id, name] of Object.entries(t.leagues)) for (const m of months) {
       const j = await get(`${BASE}/rugby/${id}/scoreboard?dates=${m}`);
-      for (const ev of j?.events || []) if (isTeam(ev, t.name)) add(normalize(ev, { sport: 'rugby', league: name, tier, team: t.name }));
+      for (const ev of j?.events || []) if (isTeam(ev, t.name)) add(normalize(ev, { sport: 'rugby', league: name, tier, team: t.name, feed: `rugby/${id}` }));
     }
   } // kind "manual" (e.g. a darts player) has no feed; the daily editor adds those to data/manual.json.
 }
@@ -132,7 +135,7 @@ for (const l of cfg.candidateLeagues) for (const m of months) {
   for (const ev of j?.events || []) {
     // Team schedules can miss just-finished games; promote any candidate that features one of your football teams.
     const mine = l.path.startsWith('soccer/') && !/women|nwsl/i.test(l.league) && soccerTeams.find(t => isTeam(ev, t.name));
-    add(normalize(ev, { sport: l.path.split('/')[0], league: l.league, tier: mine ? mine.tier : 'candidate', team: mine ? mine.name : null }));
+    add(normalize(ev, { sport: l.path.split('/')[0], league: l.league, tier: mine ? mine.tier : 'candidate', team: mine ? mine.name : null, feed: l.path }));
   }
 }
 
