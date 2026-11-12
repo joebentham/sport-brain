@@ -160,8 +160,11 @@ final class Store: ObservableObject {
             guard let data = data, let p = try? JSONDecoder().decode(Payload.self, from: data) else { return }
             DispatchQueue.main.async {
                 self?.events = p.events
+                let first = self?.loaded == false
                 self?.loaded = true
                 self?.tick()
+                // `--demo` opens the island once at launch, for checking the expanded layout.
+                if first, CommandLine.arguments.contains("--demo") { self?.announce() }
             }
         }.resume()
     }
@@ -177,7 +180,7 @@ final class Store: ObservableObject {
         } else if live.isEmpty { lastLiveTop = nil }
     }
 
-    private func announce() {
+    func announce() {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { pulse = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 8) { [weak self] in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) { self?.pulse = false }
