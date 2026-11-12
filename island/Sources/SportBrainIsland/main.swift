@@ -118,6 +118,9 @@ final class Store: ObservableObject {
     @Published var now = Date()
     @Published var revealed: Set<String> = []
     @Published var pulse = false
+    @Published var hover = false
+    /// Current size of the visible pill, reported by the view, used for hit-testing the mouse.
+    var pillSize = CGSize(width: 290, height: 30)
     @Published var loaded = false
     private var lastLiveTop: String?
     private var timers: [Timer] = []
@@ -230,9 +233,7 @@ struct IslandView: View {
     @ObservedObject var store: Store
     let notchWidth: CGFloat
     let barHeight: CGFloat
-    @State private var hover = false
-
-    private var expanded: Bool { hover || store.pulse }
+    private var expanded: Bool { store.hover || store.pulse }
     private var spring: Animation { .spring(response: 0.36, dampingFraction: 0.82) }
 
     var body: some View {
@@ -245,12 +246,12 @@ struct IslandView: View {
             .background(Color.black)
             .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: expanded ? 28 : 13, bottomTrailingRadius: expanded ? 28 : 13, style: .continuous))
             .shadow(color: .black.opacity(expanded ? 0.4 : 0), radius: 20, y: 10)
-            .contentShape(Rectangle())
-            .onHover { h in withAnimation(spring) { hover = h } }
+            .background(GeometryReader { g in Color.clear.onAppear { store.pillSize = g.size }.onChange(of: g.size) { _, n in store.pillSize = n } })
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environment(\.colorScheme, .dark)
+        .animation(spring, value: expanded)
     }
 
     private var collapsedWidth: CGFloat { notchWidth > 0 ? notchWidth + 250 : 290 }
@@ -374,6 +375,10 @@ final class IslandPanel: NSPanel {
     override func constrainFrameRect(_ frameRect: NSRect, to screen: NSScreen?) -> NSRect { frameRect }
 }
 
+final class ClickThroughHostingView<Content: View>: NSHostingView<Content> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 final class ClosureItem: NSMenuItem {
     private var handler: (() -> Void)?
     convenience init(_ title: String, checked: Bool = false, _ handler: @escaping () -> Void) {
@@ -406,9 +411,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             self?.layout()
         }
+        // SwiftUI hover stops firing once another app is active, so track the pointer directly.
+        NSEvent.addGlobalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] _ in self?.trackPointer() }
+        NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] e in self?.trackPointer(); return e }
+        Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.trackPointer() }
         store.start()
         layout()
         refreshStatus()
+    }
+
+    func trackPointer() {
+        guard let p = panel, p.isVisible else { return }
+        let size = store.pillSize, m = NSEvent.mouseLocation, f = p.frame
+        let slop: CGFloat = store.hover ? 10 : 0
+        let rect = NSRect(x: f.midX - size.width / 2 - slop, y: f.maxY - size.height - slop, width: size.width + slop * 2, height: size.height + slop + 2)
+        let inside = rect.contains(m)
+        if inside != store.hover { store.hover = inside }
     }
 
     /// Pins the island to the top centre of the main screen. On a notched display it wraps the notch.
@@ -427,7 +445,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let bar = max(screen.safeAreaInsets.top, menuBar, 24)
         let size = NSSize(width: 520, height: 420)
         p.setFrame(NSRect(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - size.height, width: size.width, height: size.height), display: true)
-        p.contentView = NSHostingView(rootView: IslandView(store: store, notchWidth: notch, barHeight: bar))
+        p.contentView = ClickThroughHostingView(rootView: IslandView(store: store, notchWidth: notch, barHeight: bar))
         p.orderFrontRegardless()
     }
 
