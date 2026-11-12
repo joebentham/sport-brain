@@ -1,0 +1,187 @@
+// Sport Brain: builds data/today.json from free ESPN endpoints.
+// Run: node brain/build.mjs
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const BASE = 'https://site.api.espn.com/apis/site/v2/sports';
+const cfg = JSON.parse(await readFile(join(ROOT, 'config.json'), 'utf8'));
+
+const now = new Date();
+const from = new Date(now.getTime() - cfg.windowDaysBack * 864e5);
+const to = new Date(now.getTime() + cfg.windowDaysAhead * 864e5);
+const inWindow = (iso) => { const d = new Date(iso); return d >= from && d <= to; };
+// ESPN rejects date ranges; whole months work. Cover every month the window touches.
+const months = [...new Set([from, now, to].map(d => d.toISOString().slice(0, 7).replace('-', '')))];
+
+const problems = [];
+async function get(url) {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  } catch (e) {
+    problems.push(`${url} -> ${e.message}`);
+    return null;
+  }
+}
+
+const scoreOf = (c) => c?.score == null ? null : (typeof c.score === 'object' ? c.score.displayValue : String(c.score));
+
+function channels(comp) {
+  const out = [];
+  for (const b of [...(comp.geoBroadcasts || []), ...(comp.broadcasts || [])]) {
+    if (b?.media?.shortName) out.push(b.media.shortName);
+    for (const n of b?.names || []) out.push(n);
+  }
+  return [...new Set(out)];
+}
+
+function watchFor(chans, league, sport) {
+  const keys = [];
+  for (const ch of chans) { const k = cfg.channelToService[ch]; if (k && !keys.includes(k)) keys.push(k); }
+  const verified = keys.length > 0;
+  let note = null;
+  if (!verified) {
+    const lg = (league || '').toLowerCase();
+    const rule = cfg.leagueFallback.find(r => r.match.startsWith('sport:') ? r.match === `sport:${sport}` : lg.includes(r.match));
+    if (rule) { keys.push(...rule.services); note = rule.note || null; }
+  }
+  // Owned services first, standalone apps ahead of the live-TV bundle.
+  const rank = (k) => (cfg.services[k]?.owned ? 0 : cfg.services[k]?.owned === null ? 2 : 4) + (k === 'hulu' ? 1 : 0);
+  keys.sort((a, b) => rank(a) - rank(b));
+  return {
+    channels: chans,
+    source: verified ? 'listing' : (keys.length ? 'league-default' : 'unknown'),
+    note,
+    options: keys.map(k => ({ key: k, ...cfg.services[k] })),
+  };
+}
+
+function normalize(ev, { sport, league, tier, team }) {
+  const comp = ev.competitions?.[0];
+  if (!comp || !ev.date) return null;
+  const cs = comp.competitors || [];
+  const home = cs.find(c => c.homeAway === 'home') || cs[0];
+  const away = cs.find(c => c.homeAway === 'away') || cs[1];
+  const st = comp.status?.type || ev.status?.type || {};
+  const lg = ev.league?.name || league;
+  return {
+    id: `${sport}-${ev.id}`,
+    sport, league: lg,
+    title: ev.shortName && sport !== 'soccer' && sport !== 'cricket' && sport !== 'rugby' ? ev.name : ev.name,
+    detail: sport === 'cricket' ? (ev.description || '').split(',')[0] : null,
+    home: home?.team?.displayName, away: away?.team?.displayName,
+    start: new Date(ev.date).toISOString(),
+    state: st.state || 'pre',
+    statusText: comp.status?.summary || st.shortDetail || st.detail || '',
+    score: st.state === 'pre' ? null : { home: scoreOf(home), away: scoreOf(away) },
+    venue: comp.venue?.fullName || null,
+    tier, team: team || null,
+    hideScore: tier === 1 && sport === 'soccer' && cfg.hideScoresFor.includes(team),
+    watch: watchFor(channels(comp), lg, sport),
+  };
+}
+
+const events = new Map();
+const rankOf = (t) => t === 1 ? 0 : t === 2 ? 1 : 2;
+const add = (e) => {
+  if (!e || !inWindow(e.start)) return;
+  const prev = events.get(e.id);
+  if (!prev) return events.set(e.id, e);
+  // Highest tier wins; keep whichever copy has broadcast info.
+  const best = rankOf(prev.tier) <= rankOf(e.tier) ? prev : e, other = best === prev ? e : prev;
+  if (!best.watch.options.length && other.watch.options.length) best.watch = other.watch;
+  events.set(e.id, best);
+};
+const isTeam = (ev, name) => (ev.competitions?.[0]?.competitors || []).some(c => c.team?.displayName === name);
+
+for (const [tier, list] of [[1, cfg.tier1], [2, cfg.tier2 || []]]) for (const t of list) {
+  if (t.kind === 'soccerTeam') {
+    for (const q of ['', '?fixture=true']) {
+      const j = await get(`${BASE}/soccer/all/teams/${t.teamId}/schedule${q}`);
+      for (const ev of j?.events || []) add(normalize(ev, { sport: 'soccer', league: 'Football', tier, team: t.name }));
+    }
+  } else if (t.kind === 'teamSchedule') {
+    const j = await get(`${BASE}/${t.path}/teams/${t.teamId}/schedule`);
+    for (const ev of j?.events || []) add(normalize(ev, { sport: t.path.split('/')[0], league: t.league, tier, team: t.name }));
+  } else if (t.kind === 'cricket') {
+    const series = new Map((t.knownSeries || []).map(id => [id, null]));
+    const panel = await get(`${BASE}/cricket/scorepanel`);
+    for (const s of panel?.scores || []) {
+      const lg = s.leagues?.[0];
+      if (lg?.id && JSON.stringify(s).includes(`"displayName":"${t.name}"`)) series.set(String(lg.id), lg.name);
+    }
+    for (const [id, name] of series) for (const m of months) {
+      const j = await get(`${BASE}/cricket/${id}/scoreboard?dates=${m}`);
+      const lname = name || j?.leagues?.[0]?.name || 'Cricket';
+      for (const ev of j?.events || []) if (isTeam(ev, t.name)) add(normalize(ev, { sport: 'cricket', league: lname, tier, team: t.name }));
+    }
+  } else if (t.kind === 'rugby') {
+    for (const [id, name] of Object.entries(t.leagues)) for (const m of months) {
+      const j = await get(`${BASE}/rugby/${id}/scoreboard?dates=${m}`);
+      for (const ev of j?.events || []) if (isTeam(ev, t.name)) add(normalize(ev, { sport: 'rugby', league: name, tier, team: t.name }));
+    }
+  } // kind "manual" (e.g. a darts player) has no feed; the daily editor adds those to data/manual.json.
+}
+
+const soccerTeams = [[1, cfg.tier1], [2, cfg.tier2 || []]].flatMap(([tier, l]) => l.filter(t => t.kind === 'soccerTeam').map(t => ({ tier, name: t.name })));
+for (const l of cfg.candidateLeagues) for (const m of months) {
+  const j = await get(`${BASE}/${l.path}/scoreboard?dates=${m}&limit=500`);
+  for (const ev of j?.events || []) {
+    // Team schedules can miss just-finished games; promote any candidate that features one of your football teams.
+    const mine = l.path.startsWith('soccer/') && !/women|nwsl/i.test(l.league) && soccerTeams.find(t => isTeam(ev, t.name));
+    add(normalize(ev, { sport: l.path.split('/')[0], league: l.league, tier: mine ? mine.tier : 'candidate', team: mine ? mine.name : null }));
+  }
+}
+
+// Editorial layer: picks.json promotes candidates and adds a "why" line to anything.
+const readJson = async (f, d) => { try { return JSON.parse(await readFile(join(ROOT, 'data', f), 'utf8')); } catch { return d; } };
+const picks = await readJson('picks.json', {});
+for (const m of await readJson('manual.json', []))
+  add({ state: 'pre', statusText: '', score: null, venue: null, team: null, hideScore: false, detail: null, ...m, watch: watchFor([], m.league, m.sport) });
+const all = [...events.values()].sort((a, b) => a.start.localeCompare(b.start));
+for (const e of all) {
+  const p = picks[e.id];
+  if (!p) continue;
+  e.why = p.why || null;
+  if (p.tier) { e.pick = p.tier; if (e.tier === 'candidate') e.tier = p.tier; }
+}
+
+await mkdir(join(ROOT, 'data'), { recursive: true });
+const shown = all.filter(e => e.tier !== 'candidate');
+const brief = await readJson('brief.json', null);
+await writeFile(join(ROOT, 'data', 'today.json'), JSON.stringify({ generatedAt: now.toISOString(), brief, events: shown, problems }, null, 1));
+await writeFile(join(ROOT, 'data', 'candidates.json'), JSON.stringify(all.filter(e => e.tier === 'candidate'), null, 1));
+
+// Calendar feed: Tier 1 plus the editor's picks. Tier 2 stays on the board only.
+const LEN = { cricket: 8, football: 3.5, baseball: 3.5, darts: 4, soccer: 2, rugby: 2, basketball: 2.5, hockey: 2.5 };
+const icsEsc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
+const stamp = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+const fold = (line) => line.match(/.{1,73}/gu).join('\r\n ');
+const cal = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Sport Brain//EN', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Sport Brain', 'REFRESH-INTERVAL;VALUE=DURATION:PT1H', 'X-PUBLISHED-TTL:PT1H'];
+let calCount = 0;
+for (const e of shown) {
+  if (!(e.tier === 1 || e.pick || e.tier === 'marquee' || e.tier === 'wildcard') || e.state === 'post') continue;
+  const start = new Date(e.start), end = new Date(start.getTime() + (LEN[e.sport] || 2.5) * 36e5);
+  const owned = e.watch.options.filter(o => o.owned !== false);
+  const where = owned.length ? owned.map(o => o.name + (o.owned === null ? '?' : '')).join(' / ')
+    : e.watch.options.length ? `Not on your services (${e.watch.options.map(o => o.name).join(', ')})` : 'Where to watch unknown';
+  const desc = [e.why, `Watch: ${where}`, e.watch.note, owned[0]?.url].filter(Boolean).join('\n');
+  cal.push('BEGIN:VEVENT', `UID:${e.id}@sport-brain`, `DTSTAMP:${stamp(now)}`);
+  if (e.timeTbc) cal.push(`DTSTART;VALUE=DATE:${e.start.slice(0, 10).replace(/-/g, '')}`);
+  else cal.push(`DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`);
+  cal.push(fold(`SUMMARY:${icsEsc((e.tier === 1 ? '★ ' : '') + e.title + (e.detail ? ` (${e.detail})` : ''))}`),
+    fold(`DESCRIPTION:${icsEsc(desc)}`), fold(`LOCATION:${icsEsc(where)}`));
+  if (owned[0]?.url) cal.push(fold(`URL:${owned[0].url}`));
+  if (!e.timeTbc) cal.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEsc(e.title)}`, 'TRIGGER:-PT10M', 'END:VALARM');
+  cal.push('END:VEVENT');
+  calCount++;
+}
+cal.push('END:VCALENDAR');
+await writeFile(join(ROOT, 'data', 'sport-brain.ics'), cal.join('\r\n') + '\r\n');
+
+console.log(`${shown.length} shown, ${all.length - shown.length} candidates, ${calCount} in calendar, ${problems.length} fetch problems`);
+for (const p of problems) console.log('  problem:', p);
+for (const e of shown) console.log(`  ${e.start.slice(0, 16)}  [${e.tier}${e.pick ? '+' + e.pick : ''}] ${e.title} (${e.league}) ${e.state} -> ${e.watch.options.map(o => o.name).join('/') || '?'}`);

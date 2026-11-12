@@ -1,0 +1,398 @@
+{
+  "windowDaysAhead": 7,
+  "windowDaysBack": 1,
+  "hideScoresFor": [
+    "Arsenal"
+  ],
+  "tier1": [
+    {
+      "name": "Arsenal",
+      "kind": "soccerTeam",
+      "teamId": "359"
+    },
+    {
+      "name": "England",
+      "label": "England (football)",
+      "kind": "soccerTeam",
+      "teamId": "448"
+    },
+    {
+      "name": "New York Jets",
+      "kind": "teamSchedule",
+      "path": "football/nfl",
+      "teamId": "20",
+      "league": "NFL"
+    },
+    {
+      "name": "New York Mets",
+      "kind": "teamSchedule",
+      "path": "baseball/mlb",
+      "teamId": "21",
+      "league": "MLB"
+    },
+    {
+      "name": "England",
+      "label": "England (cricket)",
+      "kind": "cricket",
+      "knownSeries": [
+        "24273"
+      ]
+    },
+    {
+      "name": "England",
+      "label": "England (rugby)",
+      "kind": "rugby",
+      "leagues": {
+        "17567": "Nations Championship",
+        "180659": "Six Nations"
+      }
+    }
+  ],
+  "tier2": [
+    {
+      "name": "New York Knicks",
+      "kind": "teamSchedule",
+      "path": "basketball/nba",
+      "teamId": "18",
+      "league": "NBA"
+    },
+    {
+      "name": "New York Rangers",
+      "kind": "teamSchedule",
+      "path": "hockey/nhl",
+      "teamId": "13",
+      "league": "NHL"
+    },
+    {
+      "name": "New York City FC",
+      "kind": "soccerTeam",
+      "teamId": "17606"
+    },
+    {
+      "name": "Paris FC",
+      "kind": "soccerTeam",
+      "teamId": "6851"
+    },
+    {
+      "name": "Luton Town",
+      "kind": "soccerTeam",
+      "teamId": "301"
+    },
+    {
+      "name": "Reading",
+      "kind": "soccerTeam",
+      "teamId": "338"
+    },
+    {
+      "name": "Middlesex",
+      "kind": "cricket",
+      "knownSeries": []
+    },
+    {
+      "name": "Stephen Bunting",
+      "kind": "manual",
+      "sport": "darts"
+    }
+  ],
+  "candidateLeagues": [
+    {
+      "path": "soccer/eng.1",
+      "league": "Premier League"
+    },
+    {
+      "path": "soccer/uefa.champions",
+      "league": "Champions League"
+    },
+    {
+      "path": "soccer/esp.1",
+      "league": "La Liga"
+    },
+    {
+      "path": "soccer/ger.1",
+      "league": "Bundesliga"
+    },
+    {
+      "path": "soccer/ita.1",
+      "league": "Serie A"
+    },
+    {
+      "path": "soccer/fra.1",
+      "league": "Ligue 1"
+    },
+    {
+      "path": "soccer/uefa.nations",
+      "league": "Nations League"
+    },
+    {
+      "path": "soccer/eng.w.1",
+      "league": "Women's Super League"
+    },
+    {
+      "path": "soccer/usa.nwsl",
+      "league": "NWSL"
+    },
+    {
+      "path": "soccer/uefa.wchampions",
+      "league": "Women's Champions League"
+    },
+    {
+      "path": "football/nfl",
+      "league": "NFL"
+    },
+    {
+      "path": "basketball/nba",
+      "league": "NBA"
+    },
+    {
+      "path": "hockey/nhl",
+      "league": "NHL"
+    },
+    {
+      "path": "rugby/17567",
+      "league": "Nations Championship"
+    }
+  ],
+  "services": {
+    "hulu": {
+      "name": "Hulu Live",
+      "owned": true,
+      "url": "https://www.hulu.com/live"
+    },
+    "peacock": {
+      "name": "Peacock",
+      "owned": true,
+      "url": "https://www.peacocktv.com/sports/live-and-upcoming"
+    },
+    "paramount": {
+      "name": "Paramount+",
+      "owned": true,
+      "url": "https://www.paramountplus.com/live-tv/"
+    },
+    "espn": {
+      "name": "ESPN+",
+      "owned": true,
+      "url": "https://www.espn.com/watch/"
+    },
+    "prime": {
+      "name": "Prime Video",
+      "owned": true,
+      "url": "https://www.amazon.com/gp/video/storefront"
+    },
+    "appletv": {
+      "name": "Apple TV+",
+      "owned": true,
+      "url": "https://tv.apple.com/"
+    },
+    "willow": {
+      "name": "Willow",
+      "owned": null,
+      "url": "https://www.willow.tv/"
+    },
+    "netflix": {
+      "name": "Netflix",
+      "owned": false,
+      "url": "https://www.netflix.com/"
+    },
+    "mlb": {
+      "name": "MLB.tv / SNY",
+      "owned": true,
+      "url": "https://www.mlb.com/tv"
+    },
+    "rugbypass": {
+      "name": "RugbyPass TV",
+      "owned": true,
+      "free": true,
+      "url": "https://rugbypass.tv/"
+    },
+    "fandango": {
+      "name": "Fandango",
+      "owned": true,
+      "free": true,
+      "url": "https://www.fandango.com/"
+    },
+    "youtube": {
+      "name": "YouTube",
+      "owned": true,
+      "free": true,
+      "url": "https://www.youtube.com/"
+    },
+    "fubo": {
+      "name": "Fubo",
+      "owned": false,
+      "url": "https://www.fubo.tv/"
+    },
+    "bein": {
+      "name": "beIN Sports",
+      "owned": false,
+      "url": "https://www.beinsports.com/"
+    },
+    "flo": {
+      "name": "FloRugby",
+      "owned": false,
+      "url": "https://www.florugby.com/"
+    }
+  },
+  "channelToService": {
+    "Peacock": "peacock",
+    "Paramount+": "paramount",
+    "ESPN+": "espn",
+    "Prime Video": "prime",
+    "Apple TV": "appletv",
+    "Apple TV+": "appletv",
+    "Netflix": "netflix",
+    "Willow": "willow",
+    "CBS": "hulu",
+    "FOX": "hulu",
+    "Fox": "hulu",
+    "NBC": "hulu",
+    "ABC": "hulu",
+    "ESPN": "hulu",
+    "ESPN2": "hulu",
+    "FS1": "hulu",
+    "FS2": "hulu",
+    "USA Net": "hulu",
+    "USA": "hulu",
+    "NBCSN": "hulu",
+    "NFL Net": "hulu",
+    "NFL Network": "hulu",
+    "TNT": "hulu",
+    "TBS": "hulu",
+    "truTV": "hulu",
+    "SNY": "mlb",
+    "CBSSN": "hulu",
+    "ESPN Deportes": null,
+    "NBA TV": null,
+    "MLB Net": "hulu"
+  },
+  "leagueFallback": [
+    {
+      "match": "premier league",
+      "services": [
+        "peacock",
+        "hulu"
+      ],
+      "note": "Peacock or USA Network"
+    },
+    {
+      "match": "women's champions league",
+      "services": [
+        "paramount"
+      ]
+    },
+    {
+      "match": "champions league",
+      "services": [
+        "paramount"
+      ]
+    },
+    {
+      "match": "europa",
+      "services": [
+        "paramount"
+      ]
+    },
+    {
+      "match": "fa cup",
+      "services": [
+        "espn"
+      ]
+    },
+    {
+      "match": "league cup",
+      "services": [
+        "paramount"
+      ]
+    },
+    {
+      "match": "carabao",
+      "services": [
+        "paramount"
+      ]
+    },
+    {
+      "match": "nations league",
+      "services": [
+        "fubo"
+      ],
+      "note": "Most England games are Fubo-only; some on FS1/FS2"
+    },
+    {
+      "match": "friendly",
+      "services": [
+        "fubo"
+      ]
+    },
+    {
+      "match": "la liga",
+      "services": [
+        "espn"
+      ]
+    },
+    {
+      "match": "laliga",
+      "services": [
+        "espn"
+      ]
+    },
+    {
+      "match": "bundesliga",
+      "services": [
+        "hulu",
+        "fandango"
+      ],
+      "note": "USA Network or free on Fandango"
+    },
+    {
+      "match": "serie a",
+      "services": [
+        "paramount"
+      ]
+    },
+    {
+      "match": "ligue 1",
+      "services": [
+        "bein"
+      ]
+    },
+    {
+      "match": "women's super league",
+      "services": [
+        "paramount"
+      ]
+    },
+    {
+      "match": "nations championship",
+      "services": [
+        "rugbypass"
+      ],
+      "note": "Free with registration"
+    },
+    {
+      "match": "six nations",
+      "services": [
+        "peacock"
+      ]
+    },
+    {
+      "match": "darts",
+      "services": [
+        "espn",
+        "hulu"
+      ],
+      "note": "ESPN+ / ESPN2"
+    },
+    {
+      "match": "sport:cricket",
+      "services": [
+        "willow"
+      ],
+      "note": "Probably Willow; unconfirmed for this tour"
+    },
+    {
+      "match": "mlb",
+      "services": [
+        "mlb"
+      ]
+    }
+  ]
+}

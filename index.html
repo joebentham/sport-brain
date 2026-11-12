@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Sport Brain</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #16181d; --muted: #6b7280; --line: #e5e3dc;
+    --live: #d92d20; --own: #0f7b4f; --own-bg: #e3f4ec; --no: #8a8f98; --no-bg: #eeeeea;
+    --maybe: #9a6700; --maybe-bg: #fbf0d3; --t1: #16181d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #101216; --card: #1a1d23; --ink: #f1f2f4; --muted: #9aa1ad; --line: #2a2e37;
+      --live: #ff6b5e; --own: #5fd3a0; --own-bg: #153527; --no: #9aa1ad; --no-bg: #262a32;
+      --maybe: #e8c15a; --maybe-bg: #3a3013; --t1: #f1f2f4; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  .stamp { color: var(--muted); font-size: 13px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 26px 0 8px; }
+  h2.live { color: var(--live); }
+  .row { display: grid; grid-template-columns: 76px 1fr; gap: 12px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+    color: inherit; text-decoration: none; }
+  a.row:hover { border-color: var(--muted); }
+  .when { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 15px; }
+  .when small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+  .when .dot { color: var(--live); }
+  .title { font-weight: 600; font-size: 16px; }
+  .t1 .title::before { content: "★ "; color: var(--maybe); }
+  .t2 .title::before { content: "☆ "; color: var(--muted); }
+  .brief { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
+  .brief .hl { font-weight: 600; font-size: 17px; }
+  .brief ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+  .brief p { margin: 8px 0 0; font-size: 14px; }
+  .brief .lab { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 12px; }
+  .meta { color: var(--muted); font-size: 13px; margin-top: 1px; }
+  .why { font-size: 14px; margin-top: 6px; }
+  .score { font-variant-numeric: tabular-nums; font-weight: 600; margin-top: 6px; font-size: 15px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
+  .chip { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
+  .chip.own { color: var(--own); background: var(--own-bg); }
+  .chip.no { color: var(--no); background: var(--no-bg); }
+  .chip.maybe { color: var(--maybe); background: var(--maybe-bg); }
+  .note { font-size: 12px; color: var(--muted); }
+  button.reveal { font: inherit; font-size: 13px; border: 1px solid var(--line); background: transparent;
+    color: var(--muted); border-radius: 8px; padding: 3px 10px; margin-top: 6px; cursor: pointer; }
+  .empty { color: var(--muted); font-size: 14px; padding: 6px 2px; }
+  .legend { color: var(--muted); font-size: 12px; margin-top: 28px; }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Sport Brain</h1><span class="stamp" id="stamp"></span></header>
+  <div id="app"><p class="empty">Loading…</p></div>
+  <p class="legend">★ your teams · ☆ secondary teams · green = on a service you have · amber = unconfirmed · grey = not on your services</p>
+</main>
+<script>
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const tf = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const df = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+const revealed = new Set();
+// Rough "probably still on" lengths in hours, used when a feed has no live state.
+const LEN = { cricket: 8, football: 3.5, baseball: 3.5, darts: 9, soccer: 2, rugby: 2, basketball: 2.5, hockey: 2.5 };
+
+function chips(w) {
+  if (!w.options.length) return '<span class="chip no">Where to watch: unknown</span>';
+  const out = w.options.map(o => {
+    const cls = o.owned === true ? 'own' : o.owned === null ? 'maybe' : 'no';
+    const label = o.owned === true ? o.name + (o.free ? ' · free' : '') : o.owned === null ? o.name + '?' : 'Not on your services · ' + o.name;
+    return `<span class="chip ${cls}">${esc(label)}</span>`;
+  }).join('');
+  const note = w.note ? `<span class="note">${esc(w.note)}</span>` : (w.source === 'league-default' ? '<span class="note">usual home for this competition</span>' : '');
+  return out + note;
+}
+
+function row(e, now) {
+  const d = new Date(e.start);
+  const live = e.state === 'in' || (e.state === 'pre' && d <= now && now - d < (LEN[e.sport] || 2.5) * 36e5 && !e.timeTbc);
+  const link = e.watch.options.find(o => o.owned !== false);
+  const when = e.state === 'post' ? `FT<small>${tf.format(d)}</small>`
+    : live ? `<span class="dot">●</span> Live<small>${tf.format(d)}</small>`
+    : e.timeTbc ? `TBC<small>time</small>` : tf.format(d);
+  let score = '';
+  if (e.score && (e.score.home != null || e.score.away != null)) {
+    score = e.hideScore && !revealed.has(e.id)
+      ? `<button class="reveal" data-id="${esc(e.id)}">Score hidden · show</button>`
+      : `<div class="score">${esc(e.home)} ${esc(e.score.home)} · ${esc(e.away)} ${esc(e.score.away)}</div>`;
+  }
+  const status = e.statusText && !(e.hideScore && !revealed.has(e.id)) && e.state !== 'pre' ? ` · ${esc(e.statusText)}` : '';
+  const body = `<div class="when">${when}</div><div>
+    <div class="title">${esc(e.title)}</div>
+    <div class="meta">${esc([e.detail, e.league].filter(Boolean).join(' · '))}${status}</div>
+    ${e.why ? `<div class="why">${esc(e.why)}</div>` : ''}${score}
+    <div class="chips">${chips(e.watch)}</div></div>`;
+  const cls = `row${e.tier === 1 ? ' t1' : e.tier === 2 ? ' t2' : ''}`;
+  return link ? `<a class="${cls}" href="${esc(link.url)}" target="_blank" rel="noopener">${body}</a>` : `<div class="${cls}">${body}</div>`;
+}
+
+let data = null;
+function render() {
+  if (!data) return;
+  const now = new Date();
+  const isLive = (e) => { const d = new Date(e.start); return e.state === 'in' || (e.state === 'pre' && !e.timeTbc && d <= now && now - d < (LEN[e.sport] || 2.5) * 36e5); };
+  const live = data.events.filter(isLive);
+  const done = data.events.filter(e => e.state === 'post').reverse();
+  const upcoming = data.events.filter(e => !isLive(e) && e.state !== 'post' && (new Date(e.start) > now || e.timeTbc));
+  let html = '';
+  const b = data.brief;
+  if (b) {
+    const recaps = (b.recaps || []).map((r, i) => r.spoiler && !revealed.has('brief' + i)
+      ? `<p><button class="reveal" data-id="brief${i}">${esc(r.label || 'Result')} hidden · show</button></p>` : `<p>${esc(r.text)}</p>`).join('');
+    html += `<div class="brief"><div class="hl">${esc(b.headline)}</div>`
+      + ((b.today || []).length ? `<ul>${b.today.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : '')
+      + (recaps ? `<div class="lab">Recaps</div>${recaps}` : '')
+      + (b.lookAhead ? `<div class="lab">Coming up</div><p>${esc(b.lookAhead)}</p>` : '') + `</div>`;
+  }
+  html += `<h2 class="live">On now</h2>` + (live.length ? live.map(e => row(e, now)).join('') : '<p class="empty">Nothing of yours is live right now.</p>');
+  const groups = new Map();
+  for (const e of upcoming) { const d = new Date(e.start); const k = dayKey(d); if (!groups.has(k)) groups.set(k, { d, items: [] }); groups.get(k).items.push(e); }
+  const today = dayKey(now), tomorrow = dayKey(new Date(now.getTime() + 864e5));
+  for (const [k, g] of groups) {
+    const name = k === today ? 'Later today' : k === tomorrow ? 'Tomorrow · ' + df.format(g.d) : df.format(g.d);
+    html += `<h2>${esc(name)}</h2>` + g.items.map(e => row(e, now)).join('');
+  }
+  if (done.length) html += `<h2>Results</h2>` + done.map(e => row(e, now)).join('');
+  document.getElementById('app').innerHTML = html;
+  document.getElementById('stamp').textContent = 'Updated ' + tf.format(new Date(data.generatedAt));
+}
+document.addEventListener('click', (ev) => {
+  const b = ev.target.closest('button.reveal'); if (!b) return;
+  ev.preventDefault(); revealed.add(b.dataset.id); render();
+});
+async function load() {
+  try { data = await (await fetch('data/today.json', { cache: 'no-store' })).json(); render(); }
+  catch (e) { document.getElementById('app').innerHTML = '<p class="empty">Could not load data/today.json. Run: node brain/build.mjs</p>'; }
+}
+load(); setInterval(load, 60000); setInterval(render, 30000);
+</script>
+</body>
+</html>
