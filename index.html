@@ -4,145 +4,254 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sport Brain">
+<meta name="theme-color" content="#eef1f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d14" media="(prefers-color-scheme: dark)">
 <title>Sport Brain</title>
 <style>
   :root {
-    --bg: #f6f5f1; --card: #ffffff; --ink: #16181d; --muted: #6b7280; --line: #e5e3dc;
-    --live: #d92d20; --own: #0f7b4f; --own-bg: #e3f4ec; --no: #8a8f98; --no-bg: #eeeeea;
-    --maybe: #9a6700; --maybe-bg: #fbf0d3; --t1: #16181d;
+    --bg: #eef1f8;
+    --glow-a: rgba(10, 132, 255, 0.28); --glow-b: rgba(255, 55, 95, 0.20); --glow-c: rgba(48, 209, 88, 0.20);
+    --glass: rgba(255, 255, 255, 0.58); --glass-strong: rgba(255, 255, 255, 0.74);
+    --edge: rgba(255, 255, 255, 0.85); --hair: rgba(60, 60, 67, 0.14);
+    --ink: #111114; --ink2: rgba(60, 60, 67, 0.72); --ink3: rgba(60, 60, 67, 0.5);
+    --shadow: 0 10px 40px rgba(31, 38, 60, 0.10), 0 1px 2px rgba(31, 38, 60, 0.06);
+    --blue: #007aff; --red: #ff3b30; --green: #1f9d55; --amber: #b25e00; --gold: #f5a300;
+    --green-bg: rgba(52, 199, 89, 0.18); --amber-bg: rgba(255, 159, 10, 0.20); --grey-bg: rgba(120, 120, 128, 0.16);
+    --seg: rgba(120, 120, 128, 0.14); --seg-on: rgba(255, 255, 255, 0.92);
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #101216; --card: #1a1d23; --ink: #f1f2f4; --muted: #9aa1ad; --line: #2a2e37;
-      --live: #ff6b5e; --own: #5fd3a0; --own-bg: #153527; --no: #9aa1ad; --no-bg: #262a32;
-      --maybe: #e8c15a; --maybe-bg: #3a3013; --t1: #f1f2f4; }
+    :root {
+      --bg: #0b0d14;
+      --glow-a: rgba(10, 132, 255, 0.30); --glow-b: rgba(191, 90, 242, 0.22); --glow-c: rgba(48, 209, 88, 0.14);
+      --glass: rgba(255, 255, 255, 0.075); --glass-strong: rgba(255, 255, 255, 0.11);
+      --edge: rgba(255, 255, 255, 0.14); --hair: rgba(255, 255, 255, 0.10);
+      --ink: #f5f5f7; --ink2: rgba(235, 235, 245, 0.68); --ink3: rgba(235, 235, 245, 0.42);
+      --shadow: 0 12px 44px rgba(0, 0, 0, 0.45);
+      --blue: #0a84ff; --red: #ff453a; --green: #30d158; --amber: #ffb340; --gold: #ffd60a;
+      --green-bg: rgba(48, 209, 88, 0.18); --amber-bg: rgba(255, 159, 10, 0.20); --grey-bg: rgba(120, 120, 128, 0.26);
+      --seg: rgba(120, 120, 128, 0.26); --seg-on: rgba(255, 255, 255, 0.18);
+    }
   }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--ink);
-    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 20px 16px 60px; }
-  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
-  h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
-  .stamp { color: var(--muted); font-size: 13px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 26px 0 8px; }
-  h2.live { color: var(--live); }
-  .row { display: grid; grid-template-columns: 76px 1fr; gap: 12px; background: var(--card);
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); }
+  body { margin: 0; color: var(--ink); min-height: 100vh;
+    font: 16px/1.38 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; }
+  body::before { content: ""; position: fixed; inset: -10%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(42% 36% at 12% 8%, var(--glow-a), transparent 70%),
+      radial-gradient(40% 34% at 92% 22%, var(--glow-b), transparent 70%),
+      radial-gradient(46% 38% at 50% 100%, var(--glow-c), transparent 70%),
+      var(--bg); }
+  main { max-width: 720px; margin: 0 auto;
+    padding: calc(22px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+
+  .glass { background: var(--glass); border: 1px solid var(--edge); border-radius: 24px; box-shadow: var(--shadow);
+    -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); }
+
+  header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0 4px 16px; }
+  .date { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink3); }
+  h1 { font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.022em; margin: 2px 0 0; }
+  .stamp { font-size: 12px; color: var(--ink3); padding-bottom: 6px; white-space: nowrap; }
+
+  /* Hero: the one answer to "what should I put on?" */
+  .hero { padding: 20px; position: relative; overflow: hidden; display: block; color: inherit; text-decoration: none; }
+  .hero .kicker { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--blue); display: flex; align-items: center; gap: 7px; }
+  .hero.live .kicker { color: var(--red); }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.6); animation: pulse 1.8s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 9px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+  .hero .big { font-size: 26px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }
+  .hero .sub { color: var(--ink2); font-size: 15px; margin-top: 4px; }
+  .hero .why { font-size: 16px; margin-top: 10px; }
+  .hero .score { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 10px; }
+  .hero .foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; background: var(--blue); color: #fff; font-weight: 600; font-size: 15px;
+    padding: 10px 18px; border-radius: 999px; }
+  .btn.off { background: var(--grey-bg); color: var(--ink2); }
+  .hero .emoji { position: absolute; right: -6px; top: -14px; font-size: 96px; opacity: 0.16; transform: rotate(12deg); pointer-events: none; }
+
+  .brief { padding: 18px 20px; margin-top: 14px; }
+  .brief .label, .section { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink3); }
+  .brief .hl { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-top: 6px; }
+  .brief p { margin: 8px 0 0; font-size: 15px; color: var(--ink2); }
+  .brief .label + p { margin-top: 4px; }
+  .brief .label.gap { margin-top: 14px; }
+
+  .seg { display: flex; gap: 2px; padding: 3px; margin: 20px 0 0; background: var(--seg); border-radius: 12px;
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  .seg button { flex: 1; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink2); background: transparent; border: 0;
+    padding: 7px 8px; border-radius: 9px; cursor: pointer; }
+  .seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
+
+  .section { margin: 26px 6px 8px; display: flex; justify-content: space-between; }
+  .list { overflow: hidden; }
+  .row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: start; padding: 13px 16px; position: relative;
     color: inherit; text-decoration: none; }
-  a.row:hover { border-color: var(--muted); }
-  .when { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 15px; }
-  .when small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
-  .when .dot { color: var(--live); }
-  .title { font-weight: 600; font-size: 16px; }
-  .t1 .title::before { content: "★ "; color: var(--maybe); }
-  .t2 .title::before { content: "☆ "; color: var(--muted); }
-  .brief { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-top: 12px; }
-  .brief .hl { font-weight: 600; font-size: 17px; }
-  .brief ul { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
-  .brief p { margin: 8px 0 0; font-size: 14px; }
-  .brief .lab { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 12px; }
-  .meta { color: var(--muted); font-size: 13px; margin-top: 1px; }
-  .why { font-size: 14px; margin-top: 6px; }
-  .score { font-variant-numeric: tabular-nums; font-weight: 600; margin-top: 6px; font-size: 15px; }
+  .row + .row::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--hair); }
+  a.row:active { background: var(--glass-strong); }
+  .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--grey-bg); }
+  .t1 .ic { background: linear-gradient(145deg, rgba(255, 214, 10, 0.42), rgba(255, 159, 10, 0.22)); }
+  .title { font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+  .star { color: var(--gold); margin-right: 3px; font-size: 13px; vertical-align: 1px; }
+  .star.two { color: var(--ink3); }
+  .meta { color: var(--ink2); font-size: 13px; margin-top: 1px; }
+  .why { font-size: 14px; margin-top: 5px; }
+  .rowscore { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 5px; }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
-  .chip { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; }
-  .chip.own { color: var(--own); background: var(--own-bg); }
-  .chip.no { color: var(--no); background: var(--no-bg); }
-  .chip.maybe { color: var(--maybe); background: var(--maybe-bg); }
-  .note { font-size: 12px; color: var(--muted); }
-  button.reveal { font: inherit; font-size: 13px; border: 1px solid var(--line); background: transparent;
-    color: var(--muted); border-radius: 8px; padding: 3px 10px; margin-top: 6px; cursor: pointer; }
-  .empty { color: var(--muted); font-size: 14px; padding: 6px 2px; }
-  .legend { color: var(--muted); font-size: 12px; margin-top: 28px; }
+  .chip { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .chip.own { color: var(--green); background: var(--green-bg); }
+  .chip.maybe { color: var(--amber); background: var(--amber-bg); }
+  .chip.no { color: var(--ink2); background: var(--grey-bg); }
+  .note { font-size: 12px; color: var(--ink3); }
+  .when { text-align: right; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 1px; }
+  .when small { display: block; font-size: 12px; font-weight: 500; color: var(--ink3); }
+  .when.live { color: var(--red); }
+  button.reveal { font: inherit; font-size: 13px; font-weight: 600; border: 0; background: var(--grey-bg); color: var(--ink2);
+    border-radius: 999px; padding: 5px 12px; margin-top: 6px; cursor: pointer; }
+  .empty { color: var(--ink2); font-size: 15px; padding: 18px 20px; }
+  .legend { color: var(--ink3); font-size: 12px; margin: 26px 6px 0; line-height: 1.6; }
+  @media (max-width: 420px) { h1 { font-size: 30px; } .hero .big { font-size: 23px; } .row { padding: 12px 14px; } }
 </style>
 </head>
 <body>
 <main>
-  <header><h1>Sport Brain</h1><span class="stamp" id="stamp"></span></header>
-  <div id="app"><p class="empty">Loading…</p></div>
-  <p class="legend">★ your teams · ☆ secondary teams · green = on a service you have · amber = unconfirmed · grey = not on your services</p>
+  <header>
+    <div><div class="date" id="date"></div><h1>Sport Brain</h1></div>
+    <span class="stamp" id="stamp"></span>
+  </header>
+  <div id="app"><div class="glass empty">Loading…</div></div>
+  <p class="legend">★ your teams · ☆ secondary teams<br>Green: on a service you have · Amber: unconfirmed · Grey: not on your services</p>
 </main>
 <script>
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const tf = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 const df = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-const revealed = new Set();
-// Rough "probably still on" lengths in hours, used when a feed has no live state.
+const EMOJI = { soccer: '⚽️', football: '🏈', cricket: '🏏', rugby: '🏉', darts: '🎯', basketball: '🏀', hockey: '🏒', baseball: '⚾️' };
+// Rough "probably still on" lengths in hours, used when the hourly data has not caught up with a live game.
 const LEN = { cricket: 8, football: 3.5, baseball: 3.5, darts: 9, soccer: 2, rugby: 2, basketball: 2.5, hockey: 2.5 };
+const revealed = new Set();
+let filter = 'all';
+try { filter = localStorage.getItem('sb-filter') || 'all'; } catch {}
+let data = null;
 
+const isLive = (e, now) => { const d = new Date(e.start); return e.state === 'in' || (e.state === 'pre' && !e.timeTbc && d <= now && now - d < (LEN[e.sport] || 2.5) * 36e5); };
+const isMine = (e) => e.tier === 1 || e.tier === 2;
+const isPick = (e) => e.tier === 1 || e.pick || e.tier === 'marquee' || e.tier === 'wildcard';
+const rank = (e) => e.tier === 1 ? 0 : (e.pick || e.tier === 'marquee' || e.tier === 'wildcard') ? 1 : 2;
+const linkOf = (e) => e.watch.options.find(o => o.owned !== false);
+const hidden = (e) => e.hideScore && !revealed.has(e.id);
+const hasScore = (e) => e.score && (e.score.home != null || e.score.away != null);
+
+function until(d, now) {
+  const m = Math.round((d - now) / 6e4);
+  if (m < 60) return `in ${Math.max(m, 1)} min`;
+  if (m < 24 * 60) return `in ${Math.floor(m / 60)}h ${m % 60}m`;
+  return df.format(d);
+}
 function chips(w) {
-  if (!w.options.length) return '<span class="chip no">Where to watch: unknown</span>';
-  const out = w.options.map(o => {
+  if (!w.options.length) return '<span class="chip no">Where to watch unknown</span>';
+  return w.options.map(o => {
     const cls = o.owned === true ? 'own' : o.owned === null ? 'maybe' : 'no';
     const label = o.owned === true ? o.name + (o.free ? ' · free' : '') : o.owned === null ? o.name + '?' : 'Not on your services · ' + o.name;
     return `<span class="chip ${cls}">${esc(label)}</span>`;
-  }).join('');
-  const note = w.note ? `<span class="note">${esc(w.note)}</span>` : (w.source === 'league-default' ? '<span class="note">usual home for this competition</span>' : '');
-  return out + note;
+  }).join('') + (w.note ? `<span class="note">${esc(w.note)}</span>` : '');
+}
+const star = (e) => e.tier === 1 ? '<span class="star">★</span>' : e.tier === 2 ? '<span class="star two">☆</span>' : '';
+
+function hero(e, now) {
+  const live = isLive(e, now), d = new Date(e.start), link = linkOf(e);
+  const kicker = live ? '<span class="pulse"></span>On now' : `Next up · ${until(d, now)}`;
+  const score = live && hasScore(e) ? (hidden(e) ? `<button class="reveal" data-id="${esc(e.id)}">Score hidden · show</button>`
+    : `<div class="score">${esc(e.home)} ${esc(e.score.home)} · ${esc(e.away)} ${esc(e.score.away)}</div>`) : '';
+  const btn = link ? `<span class="btn">▶ Watch on ${esc(link.name)}${link.owned === null ? '?' : ''}</span>`
+    : `<span class="btn off">${e.watch.options.length ? 'Not on your services · ' + esc(e.watch.options[0].name) : 'Where to watch unknown'}</span>`;
+  const inner = `<span class="emoji">${EMOJI[e.sport] || '🏟️'}</span>
+    <div class="kicker">${kicker}</div>
+    <div class="big">${star(e)}${esc(e.title)}</div>
+    <div class="sub">${esc([e.detail, e.league, live ? null : tf.format(d)].filter(Boolean).join(' · '))}</div>
+    ${e.why ? `<div class="why">${esc(e.why)}</div>` : ''}${score}
+    <div class="foot">${btn}${e.watch.note ? `<span class="note">${esc(e.watch.note)}</span>` : ''}</div>`;
+  const cls = `glass hero${live ? ' live' : ''}`;
+  return link ? `<a class="${cls}" href="${esc(link.url)}" target="_blank" rel="noopener">${inner}</a>` : `<div class="${cls}">${inner}</div>`;
 }
 
 function row(e, now) {
-  const d = new Date(e.start);
-  const live = e.state === 'in' || (e.state === 'pre' && d <= now && now - d < (LEN[e.sport] || 2.5) * 36e5 && !e.timeTbc);
-  const link = e.watch.options.find(o => o.owned !== false);
-  const when = e.state === 'post' ? `FT<small>${tf.format(d)}</small>`
-    : live ? `<span class="dot">●</span> Live<small>${tf.format(d)}</small>`
-    : e.timeTbc ? `TBC<small>time</small>` : tf.format(d);
-  let score = '';
-  if (e.score && (e.score.home != null || e.score.away != null)) {
-    score = e.hideScore && !revealed.has(e.id)
-      ? `<button class="reveal" data-id="${esc(e.id)}">Score hidden · show</button>`
-      : `<div class="score">${esc(e.home)} ${esc(e.score.home)} · ${esc(e.away)} ${esc(e.score.away)}</div>`;
-  }
-  const status = e.statusText && !(e.hideScore && !revealed.has(e.id)) && e.state !== 'pre' ? ` · ${esc(e.statusText)}` : '';
-  const body = `<div class="when">${when}</div><div>
-    <div class="title">${esc(e.title)}</div>
-    <div class="meta">${esc([e.detail, e.league].filter(Boolean).join(' · '))}${status}</div>
-    ${e.why ? `<div class="why">${esc(e.why)}</div>` : ''}${score}
-    <div class="chips">${chips(e.watch)}</div></div>`;
-  const cls = `row${e.tier === 1 ? ' t1' : e.tier === 2 ? ' t2' : ''}`;
+  const d = new Date(e.start), live = isLive(e, now), link = linkOf(e);
+  const when = e.state === 'post' ? `Final<small>${tf.format(d)}</small>` : live ? `Live<small>${tf.format(d)}</small>` : e.timeTbc ? `TBC` : tf.format(d);
+  const score = hasScore(e) ? (hidden(e) ? `<button class="reveal" data-id="${esc(e.id)}">Score hidden · show</button>`
+    : `<div class="rowscore">${esc(e.home)} ${esc(e.score.home)} · ${esc(e.away)} ${esc(e.score.away)}</div>`) : '';
+  const status = e.statusText && e.state !== 'pre' && !hidden(e) && !/^(FT|Final)$/i.test(e.statusText) ? ' · ' + esc(e.statusText) : '';
+  const body = `<div class="ic">${EMOJI[e.sport] || '🏟️'}</div>
+    <div><div class="title">${star(e)}${esc(e.title)}</div>
+      <div class="meta">${esc([e.detail, e.league].filter(Boolean).join(' · '))}${status}</div>
+      ${e.why ? `<div class="why">${esc(e.why)}</div>` : ''}${score}
+      <div class="chips">${chips(e.watch)}</div></div>
+    <div class="when${live ? ' live' : ''}">${when}</div>`;
+  const cls = `row${e.tier === 1 ? ' t1' : ''}`;
   return link ? `<a class="${cls}" href="${esc(link.url)}" target="_blank" rel="noopener">${body}</a>` : `<div class="${cls}">${body}</div>`;
 }
+const list = (items, now) => `<div class="glass list">${items.map(e => row(e, now)).join('')}</div>`;
 
-let data = null;
 function render() {
   if (!data) return;
   const now = new Date();
-  const isLive = (e) => { const d = new Date(e.start); return e.state === 'in' || (e.state === 'pre' && !e.timeTbc && d <= now && now - d < (LEN[e.sport] || 2.5) * 36e5); };
-  const live = data.events.filter(isLive);
-  const done = data.events.filter(e => e.state === 'post').reverse();
-  const upcoming = data.events.filter(e => !isLive(e) && e.state !== 'post' && (new Date(e.start) > now || e.timeTbc));
-  let html = '';
+  const keep = (e) => filter === 'mine' ? isMine(e) : filter === 'picks' ? isPick(e) : true;
+  const evs = data.events;
+  const live = evs.filter(e => isLive(e, now)).sort((a, b) => rank(a) - rank(b));
+  const upcoming = evs.filter(e => !isLive(e, now) && e.state !== 'post' && (new Date(e.start) > now || e.timeTbc));
+  const done = evs.filter(e => e.state === 'post').reverse();
+  const next = upcoming.filter(e => !e.timeTbc && rank(e) < 2)[0] || upcoming.filter(e => !e.timeTbc)[0];
+  const top = live[0] || next;
+
+  let html = top ? hero(top, now) : '<div class="glass empty">Nothing on the schedule right now.</div>';
   const b = data.brief;
   if (b) {
     const recaps = (b.recaps || []).map((r, i) => r.spoiler && !revealed.has('brief' + i)
       ? `<p><button class="reveal" data-id="brief${i}">${esc(r.label || 'Result')} hidden · show</button></p>` : `<p>${esc(r.text)}</p>`).join('');
-    html += `<div class="brief"><div class="hl">${esc(b.headline)}</div>`
-      + ((b.today || []).length ? `<ul>${b.today.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : '')
-      + (recaps ? `<div class="lab">Recaps</div>${recaps}` : '')
-      + (b.lookAhead ? `<div class="lab">Coming up</div><p>${esc(b.lookAhead)}</p>` : '') + `</div>`;
+    html += `<div class="glass brief"><div class="label">Morning brief</div><div class="hl">${esc(b.headline)}</div>`
+      + (recaps ? `<div class="label gap">Recaps</div>${recaps}` : '')
+      + (b.lookAhead ? `<div class="label gap">Coming up</div><p>${esc(b.lookAhead)}</p>` : '') + `</div>`;
   }
-  html += `<h2 class="live">On now</h2>` + (live.length ? live.map(e => row(e, now)).join('') : '<p class="empty">Nothing of yours is live right now.</p>');
+  html += `<div class="seg" role="group" aria-label="Filter">${[['all', 'Everything'], ['mine', 'My teams'], ['picks', 'Top picks']]
+    .map(([k, l]) => `<button data-filter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div>`;
+
+  const otherLive = live.filter(e => e !== top && keep(e));
+  if (otherLive.length) html += `<div class="section"><span>Also on now</span></div>` + list(otherLive, now);
   const groups = new Map();
-  for (const e of upcoming) { const d = new Date(e.start); const k = dayKey(d); if (!groups.has(k)) groups.set(k, { d, items: [] }); groups.get(k).items.push(e); }
+  for (const e of upcoming.filter(e => e !== top && keep(e))) {
+    const d = new Date(e.start), k = dayKey(d);
+    if (!groups.has(k)) groups.set(k, { d, items: [] });
+    groups.get(k).items.push(e);
+  }
   const today = dayKey(now), tomorrow = dayKey(new Date(now.getTime() + 864e5));
   for (const [k, g] of groups) {
-    const name = k === today ? 'Later today' : k === tomorrow ? 'Tomorrow · ' + df.format(g.d) : df.format(g.d);
-    html += `<h2>${esc(name)}</h2>` + g.items.map(e => row(e, now)).join('');
+    const name = k === today ? 'Later today' : k === tomorrow ? 'Tomorrow' : df.format(g.d);
+    html += `<div class="section"><span>${esc(name)}</span><span>${k === today || k === tomorrow ? esc(df.format(g.d)) : ''}</span></div>` + list(g.items, now);
   }
-  if (done.length) html += `<h2>Results</h2>` + done.map(e => row(e, now)).join('');
+  const res = done.filter(keep);
+  if (res.length) html += `<div class="section"><span>Results</span></div>` + list(res, now);
+  if (!groups.size && !otherLive.length && !res.length) html += `<div class="glass empty" style="margin-top:14px">Nothing else matches this filter.</div>`;
+
   document.getElementById('app').innerHTML = html;
+  document.getElementById('date').textContent = df.format(now);
   document.getElementById('stamp').textContent = 'Updated ' + tf.format(new Date(data.generatedAt));
 }
 document.addEventListener('click', (ev) => {
-  const b = ev.target.closest('button.reveal'); if (!b) return;
-  ev.preventDefault(); revealed.add(b.dataset.id); render();
+  const r = ev.target.closest('button.reveal');
+  if (r) { ev.preventDefault(); revealed.add(r.dataset.id); render(); return; }
+  const f = ev.target.closest('button[data-filter]');
+  if (f) { filter = f.dataset.filter; try { localStorage.setItem('sb-filter', filter); } catch {} render(); }
 });
 async function load() {
   try { data = await (await fetch('data/today.json', { cache: 'no-store' })).json(); render(); }
-  catch (e) { document.getElementById('app').innerHTML = '<p class="empty">Could not load data/today.json. Run: node brain/build.mjs</p>'; }
+  catch (e) { if (!data) document.getElementById('app').innerHTML = '<div class="glass empty">Could not load the schedule.</div>'; }
 }
 load(); setInterval(load, 60000); setInterval(render, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
 </script>
 </body>
 </html>
