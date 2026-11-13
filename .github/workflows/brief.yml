@@ -1,0 +1,42 @@
+name: Send morning brief
+# Pushes data/brief.json to ntfy once per day: when a push changes the brief's `date`
+# to today (New York). Rewrites of the same day's brief are not re-sent.
+on:
+  push:
+    branches: [main]
+    paths: [data/brief.json]
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Send even if the brief is not dated today
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: brief
+  cancel-in-progress: false
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: check
+        name: Only send when the brief's date changed
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "${{ github.event_name }}" != "push" ]; then echo "send=yes" >> "$GITHUB_OUTPUT"; exit 0; fi
+          new=$(node -p 'require("./data/brief.json").date')
+          old=$(git show "$BEFORE:data/brief.json" 2>/dev/null | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).date)}catch{console.log("")}})')
+          echo "brief date: $old -> $new"
+          if [ "$new" != "$old" ]; then echo "send=yes" >> "$GITHUB_OUTPUT"; else echo "send=no" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.check.outputs.send == 'yes'
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: node brain/send-brief.mjs ${{ inputs.force && '--force' || '' }}
