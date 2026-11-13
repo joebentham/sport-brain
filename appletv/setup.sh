@@ -20,8 +20,10 @@ if [ ! -x "$VENV/bin/python" ] || ! "$VENV/bin/python" -c 'import pyatv' 2>/dev/
   echo "Installing pyatv into $VENV ..."
   rm -rf "$VENV"
   "$PY" -m venv "$VENV"
-  "$VENV/bin/pip" install --quiet --disable-pip-version-check "pyatv>=0.18,<0.19"
 fi
+# srptools 2.0 made an argument keyword-only, which breaks pyatv 0.18's pairing ("SRPClientSession.__init__()
+# takes 2 positional arguments"). Pin it below 2; this also repairs an environment made before the pin.
+"$VENV/bin/pip" install --quiet --disable-pip-version-check "pyatv>=0.18,<0.19" "srptools<2"
 
 echo
 echo "Make sure the TV is on and showing the Apple TV, then follow the prompts."

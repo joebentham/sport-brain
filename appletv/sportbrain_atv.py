@@ -51,7 +51,20 @@ SERVICE_APP_NAMES = {
 }
 # Names that only match exactly (too short or too generic to prefix-match).
 EXACT_ONLY = {"TV", "Apple TV", "MLB", "SNY"}
-CONFIRMED = {}  # filled in after pairing from the real app list; see README
+# Read from the Living Room Apple TV's app list on 2026-11-12 (tvOS 27.2). Not installed there:
+# rugbypass, fandango, fubo, bein, flo.
+CONFIRMED = {
+    "hulu": {"bundle": "com.hulu.plus", "name": "Hulu"},
+    "peacock": {"bundle": "com.peacocktv.peacock", "name": "Peacock"},
+    "paramount": {"bundle": "com.cbsvideo.app", "name": "Paramount+"},
+    "espn": {"bundle": "com.espn.ScoreCenter", "name": "ESPN"},
+    "prime": {"bundle": "com.amazon.aiv.AIVApp", "name": "Prime Video"},
+    "appletv": {"bundle": "com.apple.TVWatchList", "name": "TV"},
+    "mlb": {"bundle": "com.mlb.AtBatUniversal", "name": "MLB"},
+    "willow": {"bundle": "tv.willow", "name": "WillowTV"},
+    "youtube": {"bundle": "com.google.ios.youtube", "name": "YouTube"},
+    "netflix": {"bundle": "com.netflix.Netflix", "name": "Netflix"},
+}
 
 
 class Fail(Exception):

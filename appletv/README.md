@@ -50,4 +50,28 @@ for Apple TV app item pages (`https://tv.apple.com/...` with a path); if a URL f
 ## Service → tvOS app
 
 Matched by app name against the Apple TV's own app list at setup (see `SERVICE_APP_NAMES` in `sportbrain_atv.py`).
-Confirmed bundle ids from the Living Room Apple TV: _pending first pairing_.
+Confirmed from the Living Room Apple TV's own app list (12 Nov 2026, tvOS 27.2):
+
+| Service key | tvOS app | Bundle id |
+| --- | --- | --- |
+| hulu | Hulu | com.hulu.plus |
+| peacock | Peacock | com.peacocktv.peacock |
+| paramount | Paramount+ | com.cbsvideo.app |
+| espn | ESPN | com.espn.ScoreCenter |
+| prime | Prime Video | com.amazon.aiv.AIVApp |
+| appletv | TV | com.apple.TVWatchList |
+| mlb | MLB | com.mlb.AtBatUniversal |
+| willow | WillowTV | tv.willow |
+| youtube | YouTube | com.google.ios.youtube |
+| netflix | Netflix | com.netflix.Netflix |
+
+Not installed, so the island offers only "Open on this Mac" for them: rugbypass, fandango, fubo, bein, flo.
+Install one on the Apple TV, then run `sportbrain_atv.py apps` (or setup again) to pick it up.
+
+## Known issue
+
+pyatv 0.18 pairing breaks with srptools 2.0 (`SRPClientSession.__init__() takes 2 positional arguments`).
+`setup.sh` pins `srptools<2`.
+
+Tested 12 Nov 2026: `launch espn` opened ESPN on the Apple TV in under 2 s, both from the repo and from the copy
+inside the island app. Waking from sleep is not yet tested (the Apple TV was already on).
