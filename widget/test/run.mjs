@@ -92,7 +92,7 @@ console.log('\n2. Faked live game + faked hideScore game, ESPN feeds stubbed');
 {
   const data = structuredClone(real);
   const now = new Date(Date.parse(real.generatedAt) + 60 * 6e4);
-  const live = data.events.find((e) => e.tier === 1 && e.state === 'pre' && e.feed && e.home);
+  const live = data.events.find((e) => e.tier === 1 && e.state === 'pre' && e.feed && e.home && e.sport !== 'rugby');
   live.start = new Date(now - 40 * 6e4).toISOString(); live.state = 'in'; live.score = { home: '0', away: '0' }; live.statusText = "40'";
   const hidden = {
     ...structuredClone(live), id: 'soccer-999001', sport: 'soccer', league: 'Premier League', feed: 'soccer/eng.1',
@@ -179,6 +179,22 @@ console.log('\n4. Offline with cache');
 }
 
 // ---------- 5. timeTbc skipped, nothing live → nextRefresh
+console.log('\n4b. Rugby shows its phase, never ESPN\'s clock');
+{
+  const now = new Date(real.generatedAt);
+  const espn = (name, summary) => ({ id: '1', competitions: [{ status: { summary, type: { state: name === 'STATUS_FINAL' ? 'post' : 'in', name } },
+    competitors: [{ homeAway: 'home', score: '12' }, { homeAway: 'away', score: '7' }] }] });
+  const base = { id: 'rugby-1', sport: 'rugby', home: 'England', away: 'Japan', homeAbbr: 'ENG', awayAbbr: 'JPN', start: new Date(now - 30 * 6e4).toISOString(), watch: { options: [] } };
+  for (const [name, want] of [['STATUS_FIRST_HALF', '1st half'], ['STATUS_HALFTIME', 'Half-time'], ['STATUS_SECOND_HALF', '2nd half'], ['STATUS_SOMETHING_ELSE', 'Live']]) {
+    const e = { ...base, ...W.fromBoard(espn(name, "1'")) };
+    ok(W.clockText(e) === want && W.stateLine(e, now) === `12–7 · ${want}`, `rugby ${name} → "${want}" with the score, no "1'"`);
+  }
+  const hiddenRugby = { ...base, ...W.fromBoard(espn('STATUS_SECOND_HALF', "1'")), hideScore: true };
+  ok(W.stateLine(hiddenRugby, now) === 'LIVE', 'rugby with hideScore shows no score or phase');
+  const soccer = { ...base, sport: 'soccer', ...W.fromBoard(espn('STATUS_SECOND_HALF', "67'")) };
+  ok(W.clockText(soccer) === "67'", 'football keeps its clock');
+}
+
 console.log('\n5. Misc');
 {
   const now = new Date(real.generatedAt);

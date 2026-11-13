@@ -77,6 +77,7 @@ function fromBoard(ev) {
   return {
     state,
     statusText: (comp.status && comp.status.summary) || st.shortDetail || st.detail || '',
+    statusName: st.name || null, // e.g. STATUS_FIRST_HALF; used for rugby, whose clock is unreliable
     score: state === 'pre' ? null : { home: scoreOf(home), away: scoreOf(away) },
   };
 }
@@ -113,9 +114,12 @@ function phase(e, now) {
 }
 
 // ESPN's status text ("67'", "2nd 5:32"). Hidden for hideScore games, since some sports put the score in it.
+// ESPN's rugby clock sits at "1'" all game, and a widget refreshes too rarely to tick one, so rugby shows its phase.
+const RUGBY_PHASE = { STATUS_FIRST_HALF: '1st half', STATUS_HALFTIME: 'Half-time', STATUS_SECOND_HALF: '2nd half' };
 function clockText(e) {
   // Hidden for games ESPN still calls "pre" too: their status text is just the scheduled time.
   if (e.hideScore || e.state === 'pre') return '';
+  if (e.sport === 'rugby') return e.state === 'in' || isLive(e, new Date()) ? (RUGBY_PHASE[e.statusName] || 'Live') : '';
   const s = String(e.statusText || '').trim();
   return /^(final|ft|full time|scheduled)$/i.test(s) ? '' : s;
 }
