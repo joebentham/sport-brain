@@ -168,7 +168,7 @@ const isOld = (data, now) => !data || !data.generatedAt || now - new Date(data.g
 
 const C = {
   bgTop: '#1C1C1E', bgBottom: '#0E0E10', text: '#FFFFFF', secondary: '#8E8E93', tertiary: '#636366',
-  red: '#FF453A', green: '#30D158', amber: '#FFD60A', divider: '#2C2C2E',
+  red: '#FF453A', green: '#30D158', amber: '#FFD60A', divider: '#2C2C2E', panel: '#2A2A2D',
 };
 const col = (hex, a) => new Color(hex, a == null ? 1 : a);
 
@@ -268,39 +268,54 @@ function staleLine(stack, info, size) {
   txt(stack, `⚠︎ Stale${when}`, Font.mediumSystemFont(size), C.amber, { scale: 0.7 });
 }
 
-// The main game block, used by small and as the left half of medium.
+// "2–1" when the score may be shown, otherwise ''.
+function scoreText(e) {
+  const t = teamsInOrder(e);
+  return t && showsScore(e) ? `${t.first.score ?? '–'}–${t.second.score ?? '–'}` : '';
+}
+
+// The main game block, used by the small widget and as the shaded left panel of the medium one.
+// Before a game: full team names, kick-off time and countdown. Live or final with a score: a big scoreboard.
 function heroBlock(parent, e, now) {
   const p = phase(e, now);
+  const t = teamsInOrder(e);
+  const scored = p !== 'pre' && !!t && showsScore(e);
+
   const head = hstack(parent);
   head.spacing = 4;
   txt(head, icon(e.sport), Font.systemFont(13), C.text);
   txt(head, e.league || '', Font.semiboldSystemFont(11), C.secondary, { scale: 0.7 });
   head.addSpacer();
-  if (p === 'live') { liveDot(head, 7); txt(head, 'LIVE', Font.boldSystemFont(10), C.red); }
+  if (p === 'live') { liveDot(head, 7); txt(head, (scored && clockText(e)) || 'LIVE', Font.boldMonospacedSystemFont(10), C.red, { scale: 0.7 }); }
   else if (p === 'final') txt(head, 'Final', Font.semiboldSystemFont(10), C.secondary);
 
-  parent.addSpacer(6);
-  const t = teamsInOrder(e);
-  if (t) {
-    const scored = p !== 'pre' && showsScore(e);
-    for (const side of [t.first, t.second]) {
+  if (scored) {
+    // Scoreboard: team code and a big score per line; the team behind is dimmed.
+    parent.addSpacer();
+    for (const [side, other] of [[t.first, t.second], [t.second, t.first]]) {
+      const behind = Number(side.score) < Number(other.score); // non-numeric scores (cricket) stay bright
       const row = hstack(parent);
-      txt(row, side.name, Font.semiboldSystemFont(15), C.text, { scale: 0.6 });
-      if (scored) { row.addSpacer(); txt(row, side.score ?? '–', Font.boldMonospacedSystemFont(17), C.text); }
+      txt(row, side.abbr, Font.semiboldSystemFont(16), behind ? C.secondary : C.text, { scale: 0.7 });
+      row.addSpacer();
+      txt(row, side.score ?? '–', Font.boldMonospacedSystemFont(30), behind ? C.secondary : C.text, { scale: 0.5 });
     }
+    parent.addSpacer();
+    return;
+  }
+
+  parent.addSpacer(6);
+  if (t) {
+    for (const side of [t.first, t.second]) txt(parent, side.name, Font.semiboldSystemFont(15), C.text, { scale: 0.6 });
   } else {
     txt(parent, e.title || e.league || 'Game', Font.semiboldSystemFont(15), C.text, { lines: 2, scale: 0.7 });
   }
-
-  parent.addSpacer(4);
+  parent.addSpacer();
   if (p === 'pre') {
     const d = new Date(e.start);
     txt(parent, timeText(d), Font.semiboldMonospacedSystemFont(20), C.text, { scale: 0.7 });
     txt(parent, sameDay(d, now) ? untilText(d, now) : dayText(d, now), Font.mediumSystemFont(11), C.secondary);
-  } else {
-    const clock = clockText(e);
-    const note = e.hideScore ? 'Score hidden' : clock;
-    if (note) txt(parent, note, Font.mediumMonospacedSystemFont(11), p === 'live' ? C.red : C.secondary, { scale: 0.7 });
+  } else if (e.hideScore) {
+    txt(parent, 'Score hidden', Font.mediumSystemFont(11), C.secondary);
   }
 }
 
@@ -312,13 +327,15 @@ function buildSmall(sel, info, now) {
   w.url = tapUrl(e);
   const col1 = vstack(w);
   heroBlock(col1, e, now);
-  w.addSpacer();
+  w.addSpacer(3);
   serviceLine(w, e, 11);
   staleLine(w, info, 9);
   return w;
 }
 
+// One game on the right of the medium widget: icon, matchup and time (or score), then day or clock and service.
 function listRow(parent, e, now) {
+  const p = phase(e, now);
   const row = vstack(parent);
   row.url = tapUrl(e); // row taps work in medium widgets
   const top = hstack(row);
@@ -326,41 +343,54 @@ function listRow(parent, e, now) {
   txt(top, icon(e.sport), Font.systemFont(12), C.text);
   txt(top, shortMatchup(e), Font.semiboldSystemFont(13), C.text, { scale: 0.7 });
   top.addSpacer();
-  const p = phase(e, now);
-  if (p === 'live') { liveDot(top, 6); }
-  const right = p === 'pre' ? timeText(new Date(e.start)) : stateLine(e, now);
-  txt(top, right, Font.semiboldMonospacedSystemFont(12), p === 'live' ? C.red : p === 'final' ? C.secondary : C.text, { scale: 0.7 });
+
+  const score = scoreText(e);
+  let right, color = C.text, note = '';
+  if (p === 'pre') {
+    const d = new Date(e.start);
+    right = timeText(d);
+    if (!sameDay(d, now)) note = dayText(d, now);
+  } else if (p === 'live') {
+    liveDot(top, 6);
+    right = score || 'LIVE';
+    color = C.red;
+    note = score ? clockText(e) : '';
+  } else {
+    right = score || 'Final';
+    color = C.secondary;
+    note = score ? 'Final' : '';
+  }
+  txt(top, right, Font.semiboldMonospacedSystemFont(12), color, { scale: 0.7 });
+
   const sub = hstack(row);
-  sub.spacing = 4;
-  const subText = p === 'pre' && !sameDay(new Date(e.start), now) ? `${dayText(new Date(e.start), now)} · ` : '';
-  if (subText) txt(sub, subText, Font.mediumSystemFont(10), C.secondary);
+  sub.spacing = 0;
+  sub.addSpacer(21); // line up under the matchup, past the icon
+  if (note) txt(sub, `${note} · `, Font.mediumSystemFont(10), p === 'live' ? C.red : C.secondary, { scale: 0.7 });
   serviceLine(sub, e, 10);
 }
 
+// Medium: the top game on a lighter panel on the left, the next three games on the right.
 function buildMedium(sel, info, now) {
   const w = baseWidget();
-  w.setPadding(14, 14, 12, 14);
   const e = sel.top;
-  if (!e) return emptyWidget(w, info);
+  if (!e) { w.setPadding(14, 14, 12, 14); return emptyWidget(w, info); }
+  w.setPadding(0, 0, 0, 0);
   w.url = tapUrl(e);
   const body = hstack(w);
   body.topAlignContent();
 
   const left = vstack(body);
-  left.size = new Size(138, 0);
+  left.size = new Size(146, 0);
+  left.backgroundColor = col(C.panel);
+  left.setPadding(13, 14, 12, 12);
   left.url = tapUrl(e);
   heroBlock(left, e, now);
-  left.addSpacer();
+  left.addSpacer(3);
   serviceLine(left, e, 11);
 
-  body.addSpacer(10);
-  const divider = body.addStack();
-  divider.size = new Size(1, 120);
-  divider.backgroundColor = col(C.divider);
-  body.addSpacer(10);
-
   const right = vstack(body);
-  right.spacing = 7;
+  right.setPadding(13, 12, 12, 14);
+  right.spacing = 8;
   const rows = sel.rest.slice(0, 3);
   if (!rows.length) txt(right, 'Nothing else coming up', Font.mediumSystemFont(12), C.secondary);
   for (const r of rows) listRow(right, r, now);

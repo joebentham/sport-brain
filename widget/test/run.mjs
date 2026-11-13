@@ -131,6 +131,13 @@ console.log('\n2. Faked live game + faked hideScore game, ESPN feeds stubbed');
   ok(!r2.lines.some((l) => /^\d+$/.test(l)), 'hideScore top game shows no score numbers');
   ok(r2.lines.includes('Score hidden'), 'hideScore top game says the score is hidden');
   ok(r2.w.url === 'https://www.peacocktv.com/', 'tap opens the owned service');
+  const m2 = await render('medium', d2, now);
+  console.log('  [medium, hideScore on top] ' + m2.lines.join(' | '));
+  ok(m2.lines.includes('2–1') && m2.lines.includes("52' · "), 'medium: a live game in the list shows its score and clock');
+  ok(!m2.lines.some((l) => /^\d+$/.test(l)), 'medium: hidden-score game on top shows no score numbers');
+  const colorOf = (n, text) => n.text === text ? n.textColor : (n.children || []).map((c) => colorOf(c, text)).find(Boolean);
+  const sm = await render('small', data, now);
+  ok(colorOf(sm.w, 'ENG').hex === '#8E8E93' && colorOf(sm.w, 'AUS').hex === '#FFFFFF', 'scoreboard dims the team that is behind');
   const r3 = await render('accessoryRectangular', d2, now);
   ok(r3.lines[1] === '● LIVE', 'Lock Screen: hideScore second line is just "● LIVE"');
 
