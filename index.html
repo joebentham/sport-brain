@@ -88,21 +88,11 @@
   .btn.off { background: var(--grey-bg); color: var(--ink2); }
   .hero .emoji { position: absolute; right: -6px; top: -14px; font-size: 96px; opacity: 0.16; transform: rotate(12deg); pointer-events: none; }
 
-  /* My teams: one tile per tier 1 team */
-  .teams { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-  .tile { padding: 11px 13px 12px; border-radius: 18px; display: block; min-width: 0; }
-  a.tile:active { background: var(--glass-strong); }
-  .tile .who { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink3);
-    display: flex; align-items: center; gap: 5px; white-space: nowrap; overflow: hidden; }
-  .tile .vs { font-size: 15px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; margin-top: 3px; overflow: hidden;
-    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
-  .tile .at { font-size: 13px; color: var(--ink2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-  .tile .at.live { color: var(--red); font-weight: 600; display: flex; align-items: center; gap: 6px; }
-  .tile .svc { font-size: 12px; font-weight: 600; margin-top: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); }
-  .tile .svc.own { color: var(--green); } .tile .svc.maybe { color: var(--amber); }
-  .tile.off .vs { color: var(--ink2); }
-
-  .brief { padding: 18px 20px; margin-top: 14px; }
+  .brief { padding: 18px 20px; margin-bottom: 14px; position: relative; }
+  .brief .close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--grey-bg); color: var(--ink2); font: 600 13px/30px -apple-system, system-ui, sans-serif; padding: 0; text-align: center; }
+  .brief .close:hover { color: var(--ink); }
+  .brief .hl { padding-right: 28px; }
   .brief .label, .section { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink3); }
   .brief .hl { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-top: 6px; }
   .brief p { margin: 8px 0 0; font-size: 15px; color: var(--ink2); }
@@ -165,7 +155,6 @@
   .empty { color: var(--ink2); font-size: 15px; padding: 18px 20px; }
   .empty.small { font-size: 14px; padding: 13px 16px; }
   .legend { color: var(--ink3); font-size: 12px; margin: 26px 6px 0; line-height: 1.6; }
-  @media (max-width: 560px) { .teams { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   @media (max-width: 420px) { h1 { font-size: 26px; } .hero .big { font-size: 23px; } .row { padding: 12px 14px; } .row.mini { padding: 8px 14px; }
     .story { padding: 11px 14px; } }
 
@@ -220,7 +209,6 @@ const tf = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digi
 const df = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 const sdf = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 const wdf = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-const mdf = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
 const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 const EMOJI = { soccer: '⚽️', football: '🏈', cricket: '🏏', rugby: '🏉', darts: '🎯', basketball: '🏀', hockey: '🏒', baseball: '⚾️', curling: '🥌', tennis: '🎾', golf: '⛳️', f1: '🏎️', boxing: '🥊', cycling: '🚴',
@@ -237,6 +225,8 @@ let filter = 'all';
 try { filter = localStorage.getItem('sb-filter') || 'all'; } catch {}
 const PAGES = { today: 'Today', calendar: 'Calendar', stories: 'Storylines' };
 const pageOf = () => { const h = location.hash.slice(1); return PAGES[h] ? h : 'today'; };
+const briefKey = (b) => b.date || b.headline || '';
+const briefClosed = (b) => { try { return localStorage.getItem('sb-brief-closed') === briefKey(b); } catch { return false; } };
 let calDay = null; // chosen calendar day; starts on today each visit
 let data = null;
 const liveData = new Map();   // event id -> fresher state/status/score from the browser's own polling
@@ -291,27 +281,6 @@ function hero(e, now) {
     <div class="foot">${btn}${e.watch.note ? `<span class="note">${esc(e.watch.note)}</span>` : ''}</div>`;
   const cls = `glass hero${live ? ' live' : ''}`;
   return link ? `<a class="${cls}" href="${esc(link.url)}" target="_blank" rel="noopener">${inner}</a>` : `<div class="${cls}">${inner}</div>`;
-}
-
-function teamTile(n, now) {
-  const ev = data.events.find(e => e.id === n.id);
-  const live = ev ? isLive(ev, now) : n.state === 'in';
-  const who = `<div class="who"><span>${icon(n.sport)}</span>${esc(n.label)}</div>`;
-  if (!n.start) return `<div class="glass tile off">${who}<div class="vs">${esc(n.note || 'No fixtures listed')}</div><div class="at">&nbsp;</div></div>`;
-  const vs = `${n.homeAway === 'home' ? 'v' : 'at'} ${n.opponent || 'TBC'}`;
-  const d = new Date(n.start);
-  // Tiles never show a score or result, so Arsenal is safe here by construction.
-  const day = dayKey(d) === dayKey(now) ? 'Today' : d - now < 6 * 864e5 ? wdf.format(d) : mdf.format(d);
-  const at = live ? `<div class="at live"><span class="pulse"></span>Live now</div>`
-    : `<div class="at">${esc(day)}${n.timeTbc ? '' : ' · ' + esc(tf.format(d))}</div>`;
-  if (n.offseason && n.phase) {
-    return `<div class="glass tile off">${who}<div class="vs">${esc(n.phase)}</div><div class="at">From ${esc(mdf.format(d))}</div><div class="svc">${esc(vs)}</div></div>`;
-  }
-  const o = (n.watch?.options || [])[0], link = (n.watch?.options || []).find(x => x.owned !== false);
-  const svc = o ? `<div class="svc ${o.owned === true ? 'own' : o.owned === null ? 'maybe' : ''}">${esc(o.owned === false ? 'Not on yours · ' + o.name : o.name + (o.owned === null ? '?' : ''))}</div>`
-    : '<div class="svc">Where to watch unknown</div>';
-  const inner = `${who}<div class="vs" title="${esc(vs)}">${esc(vs)}</div>${at}${svc}`;
-  return link ? `<a class="glass tile" href="${esc(link.url)}" target="_blank" rel="noopener">${inner}</a>` : `<div class="glass tile">${inner}</div>`;
 }
 
 function miniRow(e, now) {
@@ -371,8 +340,18 @@ function buckets(now) {
 function pageToday(now) {
   const { live, upcoming, done, top } = buckets(now);
   const today = dayKey(now);
-  let html = top ? hero(top, now) : '<div class="glass empty">Nothing on the schedule right now.</div>';
-  if (data.nextByTeam?.length) html += `<div class="teams">${data.nextByTeam.map(n => teamTile(n, now)).join('')}</div>`;
+  let html = '';
+  // Morning brief sits on top until closed; closing it hides that day's brief only, so tomorrow's comes back.
+  const b = data.brief;
+  if (b && !briefClosed(b)) {
+    const recaps = (b.recaps || []).map((r, i) => r.spoiler && !revealed.has('brief' + i)
+      ? `<p>${revealBtn('brief' + i, (r.label || 'Result') + ' hidden · show')}</p>` : `<p>${esc(r.text)}</p>`).join('');
+    html += `<div class="glass brief"><button class="close" data-close-brief aria-label="Close morning brief">✕</button>`
+      + `<div class="label">Morning brief</div><div class="hl">${esc(b.headline)}</div>`
+      + (recaps ? `<div class="label gap">Recaps</div>${recaps}` : '')
+      + (b.lookAhead ? `<div class="label gap">Coming up</div><p>${esc(b.lookAhead)}</p>` : '') + `</div>`;
+  }
+  html += top ? hero(top, now) : '<div class="glass empty">Nothing on the schedule right now.</div>';
 
   const todays = [...live.filter(e => e !== top), ...upcoming.filter(e => e !== top && dayKey(new Date(e.start)) === today)]
     .sort((a, b) => a.start.localeCompare(b.start));
@@ -385,14 +364,6 @@ function pageToday(now) {
 
   if (data.stories?.length) html += section('Top storylines', `<a href="#stories">See all ›</a>`) + `<div class="glass list">${storylines(data.stories.slice(0, 3).map((s, i) => [s, i]))}</div>`;
 
-  const b = data.brief;
-  if (b) {
-    const recaps = (b.recaps || []).map((r, i) => r.spoiler && !revealed.has('brief' + i)
-      ? `<p>${revealBtn('brief' + i, (r.label || 'Result') + ' hidden · show')}</p>` : `<p>${esc(r.text)}</p>`).join('');
-    html += `<div class="glass brief"><div class="label">Morning brief</div><div class="hl">${esc(b.headline)}</div>`
-      + (recaps ? `<div class="label gap">Recaps</div>${recaps}` : '')
-      + (b.lookAhead ? `<div class="label gap">Coming up</div><p>${esc(b.lookAhead)}</p>` : '') + `</div>`;
-  }
   return html;
 }
 
@@ -425,7 +396,7 @@ function pageCalendar(now) {
   const past = sel < startOfDay(now);
   html += section(esc(df.format(sel)), calDay === today ? 'Today' : past ? 'Results' : '')
     + (items.length ? list(items, now) : `<div class="glass empty small">Nothing${filter === 'all' ? '' : ' in this filter'} on this day.</div>`);
-  html += `<p class="legend">★ your teams · ☆ secondary teams<br>Green: on a service you have · Amber: unconfirmed · Grey: not on your services</p>`;
+  html += `<p class="legend">Full cards: ★ your teams and the day's top picks · One-line rows: ☆ secondary teams<br>Chips show where to watch. Green: on a service you have · Amber: unconfirmed · Grey: not on your services</p>`;
   return html;
 }
 
@@ -461,6 +432,7 @@ document.addEventListener('click', (ev) => {
   if (r) { ev.preventDefault(); revealed.add(r.dataset.id); render(); return; }
   const f = ev.target.closest('button[data-filter]');
   if (f) { filter = f.dataset.filter; try { localStorage.setItem('sb-filter', filter); } catch {} render(); return; }
+  if (ev.target.closest('[data-close-brief]')) { try { localStorage.setItem('sb-brief-closed', briefKey(data.brief)); } catch {} render(); return; }
   const dd = ev.target.closest('button.dbtn');
   if (dd) { calDay = dd.dataset.day; render(); }
 });
