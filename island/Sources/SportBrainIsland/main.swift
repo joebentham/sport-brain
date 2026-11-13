@@ -261,27 +261,41 @@ final class Store: ObservableObject {
     /// Events whose state has come from the ESPN poll, so their `pre` can be trusted over the clock.
     private var polled: Set<String> = []
     private var timers: [Timer] = []
-    /// ESPN's match clock for rugby (and at times football) sticks for minutes on end, e.g. "1'" ten minutes in.
-    /// A guessed minute proved wrong in use (the real kick-off is later than the scheduled one), so when the
-    /// feed's minute is not keeping pace, show only what is certain: which half it is.
-    private func liveClock(_ e: Event, phaseName: String?, feedText: String?) -> String? {
-        let half: Int
-        switch e.sport {
-        case "rugby": half = 40
-        case "soccer": half = 45
-        default: return feedText
+    /// Per rugby game: the latest event time seen in the feed, the clock anchor taken from it, and the last phase.
+    private var rugby: [String: (seenMax: Double, anchorSecs: Double?, anchorWall: Date?, phase: String)] = [:]
+
+    /// ESPN's football clock is reliable, but its rugby clock sticks at "1'" all match. Its rugby feed does carry
+    /// the exact match time of every try, card and substitution, so anchor the clock to the newest event when it
+    /// appears (plus ~30 s for the feed's delay), tick from there, and snap again at the next event. Stoppages
+    /// make it run a little fast between events, so it is shown with "~". Before the first event seen since
+    /// launch there is nothing to anchor to, so show only the half.
+    private func liveClock(_ e: Event, phaseName: String?, feedText: String?, eventMax: Double?) -> String? {
+        guard e.sport == "rugby", let name = phaseName else { return feedText }
+        let second = name.contains("SECOND_HALF"), half = name.contains("HALFTIME")
+        guard second || half || name.contains("FIRST_HALF") else { return feedText }
+        let m = eventMax ?? 0
+        var st = rugby[e.id] ?? (m, nil, nil, name)
+        if rugby[e.id] != nil {
+            if m > st.seenMax {
+                st.anchorSecs = m + 30
+                st.anchorWall = now
+            }
+            // Saw the second half start: the clock restarts from 40:00 unless a later event already says more.
+            if second, !st.phase.contains("SECOND_HALF"), (st.anchorSecs ?? 0) < 2400 {
+                st.anchorSecs = 2400
+                st.anchorWall = now
+            }
         }
-        guard let name = phaseName else { return feedText }
-        if name.contains("HALFTIME") { return "Half-time" }
-        let second = name.contains("SECOND_HALF")
-        guard second || name.contains("FIRST_HALF") else { return feedText }
-        // Minutes since the scheduled start, less the first half and break when in the second half.
-        let sinceStart = Int(now.timeIntervalSince(e.date) / 60) - (second ? half + 15 : 0)
-        let feedMinute = feedText.flatMap { Int($0.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)) }
-        let feedInHalf = feedMinute.map { $0 - (second ? half : 0) }
-        // Trust the feed's minute only while it is within a few minutes of where the game must roughly be.
-        if let f = feedInHalf, f >= sinceStart - 8 { return feedText }
-        return second ? "2nd half" : "1st half"
+        st.seenMax = m
+        st.phase = name
+        rugby[e.id] = st
+        if half { return "Half-time" }
+        guard let anchor = st.anchorSecs, let wall = st.anchorWall, !(second && anchor < 2400) else {
+            return second ? "2nd half" : "1st half"
+        }
+        let minute = Int((anchor + now.timeIntervalSince(wall)) / 60)
+        let cap = second ? 80 : 40
+        return minute >= cap ? "~\(cap)+'" : "~\(minute)'"
     }
 
     func start() {
@@ -435,7 +449,7 @@ final class Store: ObservableObject {
             guard let data = data,
                   let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let evs = root["events"] as? [[String: Any]] else { return }
-            var updates: [String: (String?, String?, String?, String?, String?)] = [:]
+            var updates: [String: (String?, String?, String?, String?, String?, Double?)] = [:]
             for ev in evs {
                 guard let id = ev["id"] as? String,
                       let comp = (ev["competitions"] as? [[String: Any]])?.first else { continue }
@@ -446,7 +460,9 @@ final class Store: ObservableObject {
                     let s = (c["score"] as? String) ?? ((c["score"] as? [String: Any])?["displayValue"] as? String)
                     if c["homeAway"] as? String == "home" { home = s } else { away = s }
                 }
-                updates[id] = (type["state"] as? String, (status["summary"] as? String) ?? (type["shortDetail"] as? String), home, away, type["name"] as? String)
+                // Match time, in seconds, of the newest scoring play, card or substitution.
+                let eventMax = (comp["details"] as? [[String: Any]] ?? []).compactMap { ($0["clock"] as? [String: Any])?["value"] as? Double }.max()
+                updates[id] = (type["state"] as? String, (status["summary"] as? String) ?? (type["shortDetail"] as? String), home, away, type["name"] as? String, eventMax)
             }
             DispatchQueue.main.async {
                 guard let self = self else { return }
@@ -454,7 +470,7 @@ final class Store: ObservableObject {
                 for i in changed.indices where changed[i].feed == feed {
                     let espnId = changed[i].id.components(separatedBy: "-").dropFirst().joined(separator: "-")
                     guard let u = updates[espnId] else { continue }
-                    let clock = u.0 == "in" ? self.liveClock(changed[i], phaseName: u.4, feedText: u.1) : u.1
+                    let clock = u.0 == "in" ? self.liveClock(changed[i], phaseName: u.4, feedText: u.1, eventMax: u.5) : u.1
                     if let st = u.0 { changed[i].state = st; self.polled.insert(changed[i].id) }
                     if let d = clock { changed[i].statusText = d }
                     if changed[i].state != "pre" { changed[i].score = Score(home: u.2, away: u.3) }
