@@ -40,17 +40,31 @@ function channels(comp) {
   return [...new Set(out)];
 }
 
-function watchFor(chans, league, sport, editorKeys = null) {
+// Where to watch. Sources and dates for every rule live in docs/where-to-watch.md.
+// channelToService values: a service key, a list of keys (simulcasts, e.g. NBC -> Hulu Live + Peacock),
+// or null (a known channel the user cannot get, e.g. another team's regional network).
+// leagueFallback "match": a league-name substring, "sport:<sport>", or "team:<display name>" (team rules
+// are tried first, so a Knicks game with no listing falls back to MSG rather than the generic NBA rule).
+function watchFor(chans, league, sport, editorKeys = null, teams = []) {
   const keys = [];
-  for (const ch of chans) { const k = cfg.channelToService[ch]; if (k && !keys.includes(k)) keys.push(k); }
+  for (const ch of chans) for (const k of [cfg.channelToService[ch]].flat()) if (k && !keys.includes(k)) keys.push(k);
+  // In-market blackout: when a New York regional network carries the game, the ESPN+ out-of-market feed is blacked out here.
+  let note = null;
+  const bo = cfg.inMarketBlackout;
+  if (bo && chans.some(c => bo.whenChannels.includes(c)) && keys.some(k => bo.dropServices.includes(k))) {
+    for (const k of bo.dropServices) { const i = keys.indexOf(k); if (i >= 0) keys.splice(i, 1); }
+    note = bo.note;
+  }
   // Editor-chosen services (manual.json "watchKeys") replace the league fallback rule.
   const picked = Array.isArray(editorKeys) ? editorKeys.filter(k => cfg.services[k] && !keys.includes(k)) : [];
   keys.push(...picked);
   const verified = keys.length > 0;
-  let note = null;
   if (!verified) {
     const lg = (league || '').toLowerCase();
-    const rule = cfg.leagueFallback.find(r => r.match.startsWith('sport:') ? r.match === `sport:${sport}` : lg.includes(r.match));
+    const hit = (r) => r.match.startsWith('team:') ? teams.includes(r.match.slice(5))
+      : r.match.startsWith('sport:') ? r.match === `sport:${sport}` : lg.includes(r.match);
+    const rules = cfg.leagueFallback;
+    const rule = rules.find(r => r.match.startsWith('team:') && hit(r)) || rules.find(r => !r.match.startsWith('team:') && hit(r));
     if (rule) { keys.push(...rule.services); note = rule.note || null; }
   }
   // Owned services first, standalone apps ahead of the live-TV bundle.
@@ -97,7 +111,7 @@ function normalize(ev, { sport, league, tier, team, feed }) {
     preseason: ev.seasonType?.type === 1 || ev.season?.type === 1,
     tier, team: team || null,
     hideScore: tier === 1 && sport === 'soccer' && cfg.hideScoresFor.includes(team),
-    watch: watchFor(channels(comp), lg, sport),
+    watch: watchFor(channels(comp), lg, sport, null, [home?.team?.displayName, away?.team?.displayName].filter(Boolean)),
   };
 }
 

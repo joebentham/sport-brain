@@ -236,6 +236,31 @@
       "name": "FloRugby",
       "owned": false,
       "url": "https://www.florugby.com/"
+    },
+    "msg": {
+      "name": "MSG Networks",
+      "owned": false,
+      "url": "https://www.dazn.com/"
+    },
+    "leaguepass": {
+      "name": "NBA League Pass",
+      "owned": false,
+      "url": "https://www.nba.com/watch/league-pass-stream"
+    },
+    "nbatv": {
+      "name": "NBA TV",
+      "owned": false,
+      "url": "https://www.nba.com/watch"
+    },
+    "nhlnetwork": {
+      "name": "NHL Network",
+      "owned": null,
+      "url": "https://www.nhl.com/"
+    },
+    "yes": {
+      "name": "YES Network",
+      "owned": false,
+      "url": "https://www.dazn.com/"
     }
   },
   "channelToService": {
@@ -247,10 +272,16 @@
     "Apple TV+": "appletv",
     "Netflix": "netflix",
     "Willow": "willow",
-    "CBS": "hulu",
+    "CBS": [
+      "hulu",
+      "paramount"
+    ],
     "FOX": "hulu",
     "Fox": "hulu",
-    "NBC": "hulu",
+    "NBC": [
+      "hulu",
+      "peacock"
+    ],
     "ABC": "hulu",
     "ESPN": "hulu",
     "ESPN2": "hulu",
@@ -258,26 +289,154 @@
     "FS2": "hulu",
     "USA Net": "hulu",
     "USA": "hulu",
-    "NBCSN": "hulu",
+    "NBCSN": [
+      "peacock"
+    ],
     "NFL Net": "hulu",
     "NFL Network": "hulu",
     "TNT": "hulu",
     "TBS": "hulu",
     "truTV": "hulu",
-    "SNY": "mlb",
+    "SNY": [
+      "mlb",
+      "hulu"
+    ],
     "CBSSN": "hulu",
     "ESPN Deportes": null,
-    "NBA TV": null,
-    "MLB Net": "hulu"
+    "NBA TV": "nbatv",
+    "MLB Net": "hulu",
+    "MSG": "msg",
+    "MSGSN": "msg",
+    "MSG2": "msg",
+    "MSGSN2": "msg",
+    "MSG Sportsnet": "msg",
+    "MSG Networks": "msg",
+    "MSG+": "msg",
+    "MSGB": null,
+    "Hulu": "hulu",
+    "Disney+": "hulu",
+    "NHL Net": "nhlnetwork",
+    "NHL Network": "nhlnetwork",
+    "Prime Video (Local)": null,
+    "DAZN SAS": null,
+    "Spectrum Sports Net": null,
+    "Spectrum Sports Net +": null,
+    "MyMi": null,
+    "Bucks App": null,
+    "DAZN (YES)": "yes",
+    "YES": "yes",
+    "GCSEN": null,
+    "Pelicans.com": null,
+    "KJZZ-TV": null,
+    "Jazz+": null,
+    "NBC Sports Phil": null,
+    "KUNP 16": null,
+    "KSBI": null,
+    "BlazerVision": null,
+    "Thunder App": null,
+    "Scripps Sports": null,
+    "KCOP": null,
+    "Fox 11 Plus": null,
+    "NBC Sports BA": null,
+    "CARNHL": null,
+    "KONG": null,
+    "MNMT": null,
+    "NESN": null,
+    "MINNHL": null,
+    "Altitude Sports": null,
+    "Altitude 2 Sports": null,
+    "The Spot - MTN": null,
+    "CBJNHL": null,
+    "WWHO": null,
+    "KFAA-TV": null,
+    "MavsTV": null,
+    "CHSN": null,
+    "KDFI": null,
+    "Suns Live": null,
+    "Arizona's Family 3TV": null,
+    "Blues App": null,
+    "Utah 16": null,
+    "BN+": null,
+    "Mammoth+": null,
+    "DAZN CLE": null,
+    "DAZN MEM": null,
+    "DAZN MIN": null,
+    "DAZN IND": null,
+    "ERADM": null,
+    "KTLA": null,
+    "ClipperVision": null,
+    "KTVD-TV (My20)": null,
+    "DSN": null,
+    "ABTV": null,
+    "KTTV": null,
+    "KSTC": null,
+    "ABC32": null
   },
   "leagueFallback": [
+    {
+      "match": "team:New York Knicks",
+      "services": [
+        "msg"
+      ],
+      "note": "No national broadcast listed; Knicks games without one are on MSG, which Hulu Live does not carry (DAZN, Fubo or DirecTV)"
+    },
+    {
+      "match": "team:New York Rangers",
+      "services": [
+        "msg"
+      ],
+      "note": "No national broadcast listed; Rangers games without one are on MSG, which Hulu Live does not carry (DAZN, Fubo or DirecTV)"
+    },
+    {
+      "match": "team:Brooklyn Nets",
+      "services": [
+        "yes"
+      ],
+      "note": "No national broadcast listed; Nets games without one are on YES, which Hulu Live does not carry (DAZN, Fubo or DirecTV)"
+    },
+    {
+      "match": "team:New York Mets",
+      "services": [
+        "mlb",
+        "hulu"
+      ],
+      "note": "SNY (on Hulu Live in the New York area) or the MLB/SNY subscription"
+    },
+    {
+      "match": "premier league darts",
+      "services": [
+        "espn"
+      ],
+      "note": "US rights for Premier League Darts 2027 not yet confirmed; ESPN+ is the likeliest home"
+    },
+    {
+      "match": "darts",
+      "services": [
+        "espn",
+        "hulu"
+      ],
+      "note": "ESPN+ shows every session; selected sessions also on ESPN2 (ESPN replaced Peacock in June 2026)"
+    },
+    {
+      "match": "nations championship",
+      "services": [
+        "rugbypass"
+      ],
+      "note": "Free with registration"
+    },
+    {
+      "match": "six nations",
+      "services": [
+        "peacock"
+      ]
+    },
     {
       "match": "premier league",
       "services": [
         "peacock",
         "hulu"
       ],
-      "note": "Peacock or USA Network"
+      "note": "Peacock, or NBC/USA Network on Hulu Live"
     },
     {
       "match": "women's champions league",
@@ -314,6 +473,34 @@
       "services": [
         "paramount"
       ]
+    },
+    {
+      "match": "efl trophy",
+      "services": [
+        "paramount"
+      ],
+      "note": "CBS shows only a few Trophy games a season (at least three, including the final), so this one may not be on US TV"
+    },
+    {
+      "match": "league championship",
+      "services": [
+        "paramount"
+      ],
+      "note": "Selected Championship games on Paramount+"
+    },
+    {
+      "match": "league one",
+      "services": [
+        "paramount"
+      ],
+      "note": "Only selected League One games are shown in the US (Paramount+); check its schedule"
+    },
+    {
+      "match": "league two",
+      "services": [
+        "paramount"
+      ],
+      "note": "Only selected League Two games are shown in the US (Paramount+)"
     },
     {
       "match": "nations league",
@@ -358,7 +545,8 @@
       "match": "ligue 1",
       "services": [
         "bein"
-      ]
+      ],
+      "note": "beIN Sports (via Fubo, Sling or DirecTV), not on your services"
     },
     {
       "match": "women's super league",
@@ -367,32 +555,39 @@
       ]
     },
     {
-      "match": "nations championship",
+      "match": "mls",
       "services": [
-        "rugbypass"
+        "appletv"
       ],
-      "note": "Free with registration"
+      "note": "Every MLS match is on Apple TV (Season Pass ended in 2026)"
     },
     {
-      "match": "six nations",
+      "match": "england tour of australia",
       "services": [
-        "peacock"
-      ]
+        "willow"
+      ],
+      "note": "Willow in the US (confirmed for the ODIs; T20Is expected on Willow too)"
     },
     {
-      "match": "darts",
+      "match": "england tour of south africa",
       "services": [
-        "espn",
-        "hulu"
+        "willow"
       ],
-      "note": "ESPN+ / ESPN2"
+      "note": "Willow is South Africa's usual US partner; not yet confirmed for this tour"
     },
     {
       "match": "sport:cricket",
       "services": [
         "willow"
       ],
-      "note": "Probably Willow; unconfirmed for this tour"
+      "note": "Usually Willow in the US; unconfirmed for this series"
+    },
+    {
+      "match": "nba",
+      "services": [
+        "leaguepass"
+      ],
+      "note": "Out-of-market local broadcast: NBA League Pass"
     },
     {
       "match": "mlb",
@@ -400,5 +595,21 @@
         "mlb"
       ]
     }
-  ]
+  ],
+  "inMarketBlackout": {
+    "whenChannels": [
+      "MSG",
+      "MSGSN",
+      "MSG2",
+      "MSGSN2",
+      "MSG Sportsnet",
+      "MSG+",
+      "SNY",
+      "YES"
+    ],
+    "dropServices": [
+      "espn"
+    ],
+    "note": "ESPN+ shows this game only outside the New York area, so it is blacked out here"
+  }
 }
