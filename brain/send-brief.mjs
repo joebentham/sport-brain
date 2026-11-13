@@ -20,17 +20,14 @@ if (!force && brief.date !== todayNY) {
   process.exit(0);
 }
 
+// Plain text: the iPhone notification shows markdown as raw asterisks.
+// The headline is the title; the phone already shows when it arrived.
 function formatBrief(b) {
-  const day = new Date(`${b.date}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
-  const lines = [];
-  if (b.headline) lines.push(b.headline);
-  if (b.today?.length) lines.push('', '**Today**', ...b.today.map(t => `- ${t}`));
-  if (b.recaps?.length) {
-    lines.push('', '**Recaps**');
-    for (const r of b.recaps) lines.push(r.spoiler ? `- ${r.label || 'Result'}: hidden to avoid spoilers` : `- ${r.text}`);
-  }
-  if (b.lookAhead) lines.push('', `**Coming up** ${b.lookAhead}`);
-  return { title: `Sport Brain · ${day}`, message: lines.join('\n') };
+  const sections = [];
+  if (b.today?.length) sections.push(['Today', ...b.today.map(t => t.replace(/^(\d{1,2}:\d{2}\s*[AP]M):\s*/i, '$1 · '))]);
+  if (b.recaps?.length) sections.push(['Yesterday', ...b.recaps.map(r => r.spoiler ? `${r.label || 'Result'}: hidden to avoid spoilers` : r.text)]);
+  if (b.lookAhead) sections.push(['Coming up', b.lookAhead]);
+  return { title: b.headline || 'Today in sport', message: sections.map(s => s.join('\n')).join('\n\n') };
 }
 
 const { title, message } = formatBrief(brief);
@@ -47,7 +44,7 @@ if (!topic) {
 const res = await fetch(process.env.NTFY_SERVER || 'https://ntfy.sh', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ topic, title, message, markdown: true, click: BOARD, tags: ['sports_medal'] }),
+  body: JSON.stringify({ topic, title, message, click: BOARD }),
 });
 if (!res.ok) {
   console.error(`ntfy returned ${res.status}: ${await res.text()}`);
