@@ -1,18 +1,60 @@
 {
-  "cricket-1528703": { "why": "First ODI of the Australia tour, a day-nighter in Perth. Starts late evening New York time." },
-  "cricket-1528704": { "why": "Second ODI in Adelaide. Another late-night start." },
-  "cricket-1528705": { "why": "Third and final ODI of the series, in Hobart." },
-  "rugby-604002": { "why": "England's autumn Test at Twickenham. Late-morning kick-off, good Saturday desk viewing." },
-  "football-401873054": { "why": "Division game at home against Buffalo." },
-  "soccer-401861175": { "why": "Rematch of the Euro 2024 final, away in Spain." },
-  "football-401873052": { "tier": "marquee", "why": "Thursday Night Football with a New York team at home." },
-  "rugby-603999": { "tier": "marquee", "why": "World champions South Africa away to France. The heavyweight Test of the weekend." },
-  "rugby-604001": { "tier": "marquee", "why": "The All Blacks in Cardiff, a Saturday-morning kick-off in New York." },
-  "soccer-401902865": { "tier": "wildcard", "why": "Two of the biggest clubs in the Women's Super League." },
-  "soccer-401902864": { "tier": "wildcard", "why": "Arsenal Women at home in the WSL." },
-  "football-401873063": { "tier": "marquee", "why": "49ers at Cowboys in the late-afternoon national window." },
-  "football-401873064": { "tier": "marquee", "why": "Sunday Night Football, a division rivalry." },
-  "soccer-401861185": { "tier": "marquee", "why": "Germany v Netherlands, one of international football's oldest rivalries." },
-  "soccer-401916980": { "tier": "wildcard", "why": "Women's Champions League: PSG at Chelsea, mid-afternoon on a workday." },
-  "soccer-401916976": { "tier": "wildcard", "why": "Women's Champions League: Lyon at Arsenal, mid-afternoon on a workday." }
+  "cricket-1528703": {
+    "why": "First ODI of the Australia tour, a day-nighter in Perth. Starts late evening New York time."
+  },
+  "cricket-1528704": {
+    "why": "Second ODI in Adelaide. Another late-night start."
+  },
+  "cricket-1528705": {
+    "why": "Third and final ODI of the series, in Hobart."
+  },
+  "rugby-604002": {
+    "why": "England's autumn Test at Twickenham. Late-morning kick-off, good Saturday desk viewing."
+  },
+  "football-401873054": {
+    "why": "The 2-7 Jets host the 7-1 Bills, with Geno Smith at quarterback."
+  },
+  "soccer-401861175": {
+    "why": "Rematch of the Euro 2024 final, away in Spain."
+  },
+  "football-401873052": {
+    "tier": "marquee",
+    "why": "Thursday Night Football with a New York team at home."
+  },
+  "rugby-603999": {
+    "tier": "marquee",
+    "why": "World champions South Africa away to France. The heavyweight Test of the weekend."
+  },
+  "rugby-604001": {
+    "tier": "marquee",
+    "why": "The All Blacks in Cardiff, a Saturday-morning kick-off in New York."
+  },
+  "soccer-401902864": {
+    "tier": "wildcard",
+    "why": "Arsenal Women at home in the WSL."
+  },
+  "football-401873064": {
+    "tier": "marquee",
+    "why": "Sunday Night Football, a division rivalry."
+  },
+  "soccer-401861185": {
+    "tier": "marquee",
+    "why": "Germany v Netherlands, one of international football's oldest rivalries."
+  },
+  "soccer-401916980": {
+    "tier": "wildcard",
+    "why": "Women's Champions League: PSG at Chelsea, mid-afternoon on a workday."
+  },
+  "soccer-401916976": {
+    "tier": "wildcard",
+    "why": "Women's Champions League: Lyon at Arsenal, mid-afternoon on a workday."
+  },
+  "soccer-401933734": {
+    "tier": "wildcard",
+    "why": "NWSL semi-final: the winner goes to the championship game on 21 November."
+  },
+  "soccer-401933740": {
+    "tier": "wildcard",
+    "why": "NWSL semi-final: New York's Gotham FC are one win from the final."
+  }
 }

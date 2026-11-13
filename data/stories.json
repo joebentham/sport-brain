@@ -1,0 +1,66 @@
+[
+  {
+    "text": "Stephen Bunting opens his Grand Slam of Darts on Saturday against Raymond Smith, in a new three-player group format where only the group winner advances.",
+    "sport": "Darts",
+    "url": "https://pdc.tv/news/2026/november/09/littler-drawn-greaves-zonneveld-at-mr-vegas-grand-slam/",
+    "source": "PDC",
+    "kind": "event",
+    "spoiler": false
+  },
+  {
+    "text": "The 2-7 Jets host the 7-1 Bills on Sunday with 36-year-old Geno Smith at quarterback and Garrett Wilson still in concussion protocol.",
+    "sport": "NFL",
+    "url": "https://www.newyorkjets.com/news/jets-host-bills-in-week-10-afc-east-clash-11-11-2026",
+    "source": "New York Jets",
+    "kind": "story",
+    "spoiler": false
+  },
+  {
+    "text": "The Mets have a meeting set with Tarik Skubal, the two-time Cy Young winner and top free agent, who reportedly wants a deal before a possible 2 December lockout.",
+    "sport": "MLB",
+    "url": "https://www.mlbtraderumors.com/2026/11/mets-rumors-tarik-skubal-meeting-free-agent.html",
+    "source": "MLB Trade Rumors",
+    "kind": "story",
+    "spoiler": false
+  },
+  {
+    "text": "New England Test coach Stephen Fleming's first squad, for South Africa, drops spinner Shoaib Bashir for uncapped Liam Patterson-White and brings back Jacob Bethell.",
+    "sport": "Cricket",
+    "url": "https://wisden.com/cricket-news/jacob-bethell-shoaib-bashir-takeaways-from-englands-test-squad-announcement-vs-south-africa",
+    "source": "Wisden",
+    "kind": "story",
+    "spoiler": false
+  },
+  {
+    "text": "Shaun Murphy reached the Champion of Champions semi-finals without losing a frame, whitewashing Ronnie O'Sullivan 4-0 and then Chang Bingyu 6-0.",
+    "sport": "Snooker",
+    "url": "https://championofchampionssnooker.co.uk/murphy-delivers-flawless-performance-to-book-his-spot-in-the-semi-finals-2026-sportsbet-io-champion-of-champions/",
+    "source": "Champion of Champions",
+    "kind": "story",
+    "spoiler": false
+  },
+  {
+    "text": "Yokozuna Hoshoryu, back from knee surgery, has slumped to 2-4 after five days in Fukuoka, while Atamifuji is the only unbeaten wrestler at 5-0.",
+    "sport": "Sumo",
+    "url": "https://tachiai.org/2026/11/12/kyushu-2026-day-five/",
+    "source": "Tachiai",
+    "kind": "story",
+    "spoiler": false
+  },
+  {
+    "text": "Canada's Matt Dunstone beat Scotland's Bruce Mouat 7-6 to retain the Grand Slam of Curling Masters title; the tour moves to Nova Scotia next week.",
+    "sport": "Curling",
+    "url": "https://www.tsn.ca/curling/article/canadas-dunstone-beats-mouat-to-win-ph-masters-curling-title/",
+    "source": "TSN",
+    "kind": "story",
+    "spoiler": false
+  },
+  {
+    "text": "Mercedes clinched their first F1 constructors' title since 2021 in Brazil, a week after 20-year-old Kimi Antonelli wrapped up the drivers' championship.",
+    "sport": "Formula 1",
+    "url": "https://www.crash.net/f1/news/1110014/1/new-f1-championship-standings-after-brazil-grand-prix",
+    "source": "Crash.net",
+    "kind": "story",
+    "spoiler": false
+  }
+]

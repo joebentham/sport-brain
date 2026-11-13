@@ -1,5 +1,93 @@
 [
-  { "id": "manual-darts-grandslam-2026", "sport": "darts", "league": "PDC Darts", "title": "Grand Slam of Darts: opening day",
-    "start": "2026-11-14T13:00:00.000Z", "timeTbc": true, "tier": "marquee",
-    "why": "Nine days of darts from Wolverhampton, running to 22 November. Session times not confirmed here; check ESPN+." }
+  {
+    "id": "manual-darts-gs-sat-am",
+    "sport": "darts",
+    "league": "PDC Grand Slam of Darts",
+    "title": "Grand Slam of Darts: opening session",
+    "start": "2026-11-14T13:00:00.000Z",
+    "tier": "marquee",
+    "why": "Stephen Bunting plays Raymond Smith in the first session; Littler v Greaves follows in the 2:00 PM session. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "watchKeys": [
+      "peacock",
+      "espn"
+    ]
+  },
+  {
+    "id": "manual-darts-gs-sun-am",
+    "sport": "darts",
+    "league": "PDC Grand Slam of Darts",
+    "title": "Grand Slam of Darts: Sunday afternoon session",
+    "start": "2026-11-15T13:00:00.000Z",
+    "tier": "wildcard",
+    "why": "Second day of group matches. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "watchKeys": [
+      "peacock",
+      "espn"
+    ]
+  },
+  {
+    "id": "manual-darts-gs-mon",
+    "sport": "darts",
+    "league": "PDC Grand Slam of Darts",
+    "title": "Grand Slam of Darts: Monday session",
+    "start": "2026-11-16T19:00:00.000Z",
+    "tier": "wildcard",
+    "why": "Group stage continues. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "watchKeys": [
+      "peacock",
+      "espn"
+    ]
+  },
+  {
+    "id": "manual-darts-gs-tue",
+    "sport": "darts",
+    "league": "PDC Grand Slam of Darts",
+    "title": "Grand Slam of Darts: Tuesday session",
+    "start": "2026-11-17T19:00:00.000Z",
+    "tier": "wildcard",
+    "why": "Group stage concludes. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "watchKeys": [
+      "peacock",
+      "espn"
+    ]
+  },
+  {
+    "id": "manual-darts-gs-wed",
+    "sport": "darts",
+    "league": "PDC Grand Slam of Darts",
+    "title": "Grand Slam of Darts: Wednesday session",
+    "start": "2026-11-18T19:00:00.000Z",
+    "tier": "wildcard",
+    "why": "Second round begins. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "watchKeys": [
+      "peacock",
+      "espn"
+    ]
+  },
+  {
+    "id": "manual-darts-gs-thu",
+    "sport": "darts",
+    "league": "PDC Grand Slam of Darts",
+    "title": "Grand Slam of Darts: Thursday session",
+    "start": "2026-11-19T19:00:00.000Z",
+    "tier": "wildcard",
+    "why": "Second round continues. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "watchKeys": [
+      "peacock",
+      "espn"
+    ]
+  },
+  {
+    "id": "manual-curling-national-2026",
+    "sport": "curling",
+    "league": "Grand Slam of Curling",
+    "title": "Grand Slam of Curling: The National begins",
+    "start": "2026-11-17T14:00:00.000Z",
+    "timeTbc": true,
+    "tier": "wildcard",
+    "why": "Sixteen men's and sixteen women's teams in Sydney, Nova Scotia, through 22 November. Draw times not confirmed.",
+    "watchKeys": [
+      "espn"
+    ]
+  }
 ]
