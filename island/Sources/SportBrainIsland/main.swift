@@ -261,11 +261,46 @@ final class Store: ObservableObject {
     /// Events whose state has come from the ESPN poll, so their `pre` can be trusted over the clock.
     private var polled: Set<String> = []
     private var timers: [Timer] = []
+    /// Per game: the match phase the feed last reported, when we first saw it, and whether we saw it begin.
+    private var phase: [String: (name: String, since: Date, observed: Bool)] = [:]
+
+    /// ESPN's match clock for rugby (and at times football) sticks for minutes on end, e.g. "1'" ten minutes in.
+    /// When the feed's minute lags, count the minutes ourselves from the moment the half began. If we did not
+    /// see the half begin (the app started mid-game), count from the scheduled time and mark it "~" as approximate.
+    private func liveClock(_ e: Event, phaseName: String?, feedText: String?) -> String? {
+        let half: Int
+        switch e.sport {
+        case "rugby": half = 40
+        case "soccer": half = 45
+        default: return feedText
+        }
+        guard let name = phaseName else { return feedText }
+        let prev = phase[e.id]
+        if prev?.name != name {
+            let sawItStart = prev != nil || (polled.contains(e.id) && e.state == "pre")
+            phase[e.id] = (name, now, sawItStart)
+        }
+        guard let p = phase[e.id] else { return feedText }
+        if name.contains("HALFTIME") { return "HT" }
+        let base: Int, anchor: Date
+        if name.contains("FIRST_HALF") {
+            base = 0
+            anchor = p.observed ? p.since : e.date
+        } else if name.contains("SECOND_HALF") {
+            base = half
+            anchor = p.observed ? p.since : e.date.addingTimeInterval(Double(half + 18) * 60)
+        } else { return feedText }
+        let est = base + max(Int(now.timeIntervalSince(anchor) / 60) + 1, 1)
+        let feedMinute = feedText.flatMap { Int($0.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)) }
+        if let f = feedMinute, f >= est - 1 { return feedText }
+        let cap = base + half
+        return (p.observed ? "" : "~") + (est > cap ? "\(cap)+'" : "\(est)'")
+    }
 
     func start() {
         load()
         timers.append(Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in self?.load() })
-        timers.append(Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.tick() })
+        timers.append(Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in self?.tick() })
     }
 
     func isLive(_ e: Event) -> Bool {
@@ -413,7 +448,7 @@ final class Store: ObservableObject {
             guard let data = data,
                   let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let evs = root["events"] as? [[String: Any]] else { return }
-            var updates: [String: (String?, String?, String?, String?)] = [:]
+            var updates: [String: (String?, String?, String?, String?, String?)] = [:]
             for ev in evs {
                 guard let id = ev["id"] as? String,
                       let comp = (ev["competitions"] as? [[String: Any]])?.first else { continue }
@@ -424,7 +459,7 @@ final class Store: ObservableObject {
                     let s = (c["score"] as? String) ?? ((c["score"] as? [String: Any])?["displayValue"] as? String)
                     if c["homeAway"] as? String == "home" { home = s } else { away = s }
                 }
-                updates[id] = (type["state"] as? String, (status["summary"] as? String) ?? (type["shortDetail"] as? String), home, away)
+                updates[id] = (type["state"] as? String, (status["summary"] as? String) ?? (type["shortDetail"] as? String), home, away, type["name"] as? String)
             }
             DispatchQueue.main.async {
                 guard let self = self else { return }
@@ -432,8 +467,9 @@ final class Store: ObservableObject {
                 for i in changed.indices where changed[i].feed == feed {
                     let espnId = changed[i].id.components(separatedBy: "-").dropFirst().joined(separator: "-")
                     guard let u = updates[espnId] else { continue }
+                    let clock = u.0 == "in" ? self.liveClock(changed[i], phaseName: u.4, feedText: u.1) : u.1
                     if let st = u.0 { changed[i].state = st; self.polled.insert(changed[i].id) }
-                    if let d = u.1 { changed[i].statusText = d }
+                    if let d = clock { changed[i].statusText = d }
                     if changed[i].state != "pre" { changed[i].score = Score(home: u.2, away: u.3) }
                 }
                 self.events = changed
