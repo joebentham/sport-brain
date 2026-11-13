@@ -20,13 +20,35 @@ if (!force && brief.date !== todayNY) {
   process.exit(0);
 }
 
+// Sport emoji for a brief line: match it to an event in today.json by team names,
+// then fall back to keywords. No match means no emoji.
+const EMOJI = { soccer: '⚽', football: '🏈', cricket: '🏏', rugby: '🏉', basketball: '🏀', hockey: '🏒', darts: '🎯',
+  curling: '🥌', baseball: '⚾', tennis: '🎾', golf: '⛳', snooker: '🎱', cycling: '🚴', athletics: '🏃', running: '🏃',
+  motorsport: '🏎️', f1: '🏎️', boxing: '🥊', mma: '🥊', swimming: '🏊', chess: '♟️', sumo: '🤼' };
+const KEYWORDS = [[/\b(ODI|T20|Test match|Ashes|wicket)/i, 'cricket'], [/\bdarts|Bunting|Littler/i, 'darts'],
+  [/\bNFL|Thursday Night Football|touchdown/i, 'football'], [/\brugby|Six Nations/i, 'rugby'], [/\bNBA\b/i, 'basketball'],
+  [/\bNHL\b/i, 'hockey'], [/\bcurling/i, 'curling'], [/\b(Premier League|Champions League|Nations League|FA Cup)/i, 'soccer']];
+let events = [];
+try { events = JSON.parse(await readFile(join(ROOT, 'data', 'today.json'), 'utf8')).events || []; } catch {}
+const names = e => [e.home, e.away].filter(Boolean).flatMap(n => [n, n.split(' ').pop()]).filter(n => n.length > 2);
+function sportOf(line) {
+  let best = null, bestHits = 0;
+  for (const e of events) {
+    const hits = [e.home, e.away].filter(team => team && names({ home: team }).some(n => line.includes(n))).length;
+    if (hits > bestHits) { best = e; bestHits = hits; }
+  }
+  if (best) return best.sport;
+  return KEYWORDS.find(([re]) => re.test(line))?.[1];
+}
+const withEmoji = line => { const e = EMOJI[sportOf(line)]; return e ? `${e} ${line}` : line; };
+
 // Plain text: the iPhone notification shows markdown as raw asterisks.
 // The headline is the title; the phone already shows when it arrived.
 function formatBrief(b) {
   const sections = [];
-  if (b.today?.length) sections.push(['Today', ...b.today.map(t => t.replace(/^(\d{1,2}:\d{2}\s*[AP]M):\s*/i, '$1 · '))]);
-  if (b.recaps?.length) sections.push(['Yesterday', ...b.recaps.map(r => r.spoiler ? `${r.label || 'Result'}: hidden to avoid spoilers` : r.text)]);
-  if (b.lookAhead) sections.push(['Coming up', b.lookAhead]);
+  if (b.today?.length) sections.push(['Today', ...b.today.map(t => withEmoji(t.replace(/^(\d{1,2}:\d{2}\s*[AP]M):\s*/i, '$1 · ')))]);
+  if (b.recaps?.length) sections.push(['Yesterday', ...b.recaps.map(r => r.spoiler ? `🙈 ${r.label || 'Result'}: hidden to avoid spoilers` : withEmoji(r.text))]);
+  if (b.lookAhead) sections.push(['Coming up', `🔭 ${b.lookAhead}`]);
   return { title: b.headline || 'Today in sport', message: sections.map(s => s.join('\n')).join('\n\n') };
 }
 
@@ -41,13 +63,17 @@ if (!topic) {
   console.error('NTFY_TOPIC is not set.');
   process.exit(1);
 }
-const res = await fetch(process.env.NTFY_SERVER || 'https://ntfy.sh', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ topic, title, message, click: BOARD }),
-});
+// Attach the image card when the renderer is installed (the workflow installs it); otherwise text only.
+let png = null;
+try { png = await (await import('./brief-card.mjs')).cardPng(brief, sportOf); } catch (e) { console.log(`No card image: ${e.message}`); }
+const server = process.env.NTFY_SERVER || 'https://ntfy.sh';
+const res = png
+  ? await fetch(`${server}/${encodeURIComponent(topic)}?${new URLSearchParams({ title, message, click: BOARD })}`, {
+      method: 'PUT', headers: { Filename: `brief-${brief.date}.png` }, body: png })
+  : await fetch(server, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic, title, message, click: BOARD }) });
 if (!res.ok) {
   console.error(`ntfy returned ${res.status}: ${await res.text()}`);
   process.exit(1);
 }
-console.log(`Sent brief for ${brief.date}.`);
+console.log(`Sent brief for ${brief.date}${png ? ' with card' : ''}.`);

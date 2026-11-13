@@ -37,6 +37,11 @@ jobs:
           echo "brief date: $old -> $new"
           if [ "$new" != "$old" ]; then echo "send=yes" >> "$GITHUB_OUTPUT"; else echo "send=no" >> "$GITHUB_OUTPUT"; fi
       - if: steps.check.outputs.send == 'yes'
+        name: Build today.json (for sport emojis) and install the card renderer
+        run: |
+          node brain/build.mjs || echo "build failed; sending without emojis"
+          npm install --no-save --no-package-lock @resvg/resvg-js@2.6.2
+      - if: steps.check.outputs.send == 'yes'
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: node brain/send-brief.mjs ${{ inputs.force && '--force' || '' }}
