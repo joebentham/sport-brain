@@ -258,7 +258,7 @@ function highlightsUrl(e) {
 function hero(e, now) {
   const live = isLive(e, now), d = new Date(e.start), link = linkOf(e);
   const kicker = live ? '<span class="pulse"></span>On now' : `Next up · ${until(d, now)}`;
-  const status = live && e.statusText && !hidden(e) ? `<div class="status">${esc(e.statusText)}</div>` : '';
+  const st = statusOf(e), status = live && st && !hidden(e) ? `<div class="status">${esc(st)}</div>` : '';
   const score = live && hasScore(e) ? (hidden(e) ? revealBtn(e.id) : `<div class="score">${fullScore(e)}</div>${status}`) : '';
   const btn = link ? `<span class="btn">▶ Watch on ${esc(link.name)}${link.owned === null ? '?' : ''}</span>`
     : `<span class="btn off">${e.watch.options.length ? 'Not on your services · ' + esc(e.watch.options[0].name) : 'Where to watch unknown'}</span>`;
@@ -289,7 +289,7 @@ function row(e, now) {
   const d = new Date(e.start), live = isLive(e, now), post = e.state === 'post', link = post ? null : linkOf(e);
   const when = post ? `Final<small>${sdf.format(d)}</small>` : live ? `Live<small>${tf.format(d)}</small>` : e.timeTbc ? `TBC` : tf.format(d);
   const score = hasScore(e) ? (hidden(e) ? revealBtn(e.id, post ? 'Result hidden · show' : 'Score hidden · show') : `<div class="rowscore">${fullScore(e)}</div>`) : '';
-  const status = e.statusText && e.state !== 'pre' && !hidden(e) && !/^(FT|Final)$/i.test(e.statusText) ? ' · ' + esc(e.statusText) : '';
+  const st = statusOf(e), status = st && e.state !== 'pre' && !hidden(e) && !/^(FT|Final)$/i.test(st) ? ' · ' + esc(st) : '';
   // Finished games: final score plus a highlights link (both behind the reveal for hidden teams).
   const tail = post ? (hidden(e) ? '' : `<div class="chips"><a class="chip link" href="${esc(highlightsUrl(e))}" target="_blank" rel="noopener">▶ Highlights</a></div>`)
     : `<div class="chips">${chips(e.watch)}</div>`;
@@ -429,6 +429,34 @@ async function board(feed, q) {
   const j = await r.json();
   return new Map((j.events || []).map(ev => [String(ev.id), ev]));
 }
+// Rugby: ESPN's clock text sticks at "1'" all game, so it is never shown. The phase comes from the status name,
+// and the minute is counted on from the last scoring/card/sub event (details[].clock.value, exact match seconds).
+// The "~" is honest: stoppages make the count run fast until the next event snaps it back.
+const rugby = new Map(); // event id -> { phase, max, anchorSecs, anchorWall }
+const R1 = 'STATUS_FIRST_HALF', RHT = 'STATUS_HALFTIME', R2 = 'STATUS_SECOND_HALF';
+function trackRugby(id, ev, now = Date.now()) {
+  const comp = ev.competitions?.[0] || {};
+  const phase = comp.status?.type?.name || ev.status?.type?.name || '';
+  const max = Math.max(0, ...(comp.details || []).map(d => +d.clock?.value || 0));
+  const r = rugby.get(id);
+  if (!r) { rugby.set(id, { phase, max, anchorSecs: null, anchorWall: 0 }); return; } // first sight: no anchor, the last event may be old
+  if (max > r.max) { r.anchorSecs = max + 30; r.anchorWall = now; }
+  if (phase === R2 && r.phase && r.phase !== R2 && (r.anchorSecs == null || r.anchorSecs < 2400)) { r.anchorSecs = 2400; r.anchorWall = now; }
+  r.max = Math.max(r.max, max); r.phase = phase;
+}
+function rugbyText(id, now = Date.now()) {
+  const r = rugby.get(id);
+  if (!r) return '';
+  if (r.phase === RHT) return 'Half-time';
+  const second = r.phase === R2;
+  if (!second && r.phase !== R1) return '';
+  const half = second ? '2nd half' : '1st half';
+  if (r.anchorSecs == null || (second && r.anchorSecs < 2400)) return half;
+  const m = Math.floor((r.anchorSecs + (now - r.anchorWall) / 1000) / 60), cap = second ? 80 : 40;
+  return m > cap ? `~${cap}+'` : `~${m}'`;
+}
+const statusOf = e => e.sport === 'rugby' ? (e.state === 'in' ? rugbyText(e.id) : (e.state === 'post' ? e.statusText : '')) : e.statusText;
+
 function fromBoard(ev) {
   const comp = ev.competitions?.[0];
   if (!comp) return null;
@@ -452,7 +480,7 @@ async function poll() {
       // The default board is "today" in ESPN's eyes; ask for the game's own date if it is not there (e.g. overnight cricket).
       for (const day of new Set(evs.filter(e => !found.has(espnId(e))).map(e => etDate.format(new Date(e.start)).replace(/-/g, ''))))
         found = new Map([...found, ...await board(feed, '?dates=' + day)]);
-      for (const e of evs) { const ev = found.get(espnId(e)); const u = ev && fromBoard(ev); if (u) { liveData.set(e.id, u); got = true; } }
+      for (const e of evs) { const ev = found.get(espnId(e)); const u = ev && fromBoard(ev); if (u) { if (e.sport === 'rugby') trackRugby(e.id, ev); liveData.set(e.id, u); got = true; } }
       feedFails.delete(feed);
     } catch { feedFails.set(feed, (feedFails.get(feed) || 0) + 1); }
   }));
@@ -465,6 +493,8 @@ async function load() {
 }
 load().then(poll);
 setInterval(load, 5 * 60000); setInterval(poll, 30000); setInterval(render, 30000);
+// Keep a running rugby minute ticking between polls.
+setInterval(() => { if (!document.hidden && data?.events.some(e => e.sport === 'rugby' && e.state === 'in' && rugby.get(e.id)?.anchorSecs != null)) render(); }, 10000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) load().then(poll); });
 </script>
 </body>
