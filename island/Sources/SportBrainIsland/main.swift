@@ -113,16 +113,48 @@ let dayFormatter: DateFormatter = {
     return f
 }()
 
+/// Debug: `--fake-live` (or SPORT_BRAIN_FAKE_LIVE=1) adds two made-up games, one live and one about to start,
+/// so the switcher and show/hide logic can be checked when nothing real is on. Off in normal launches.
+let fakeLive = CommandLine.arguments.contains("--fake-live") || ProcessInfo.processInfo.environment["SPORT_BRAIN_FAKE_LIVE"] == "1"
+let launchedAt = Date()
+
+func fakeEvents() -> [Event] {
+    let iso = { (d: Date) in Event.iso.string(from: d) }
+    let json = """
+    [{"id":"fake-1","sport":"soccer","league":"Premier League","title":"Arsenal v Chelsea","detail":"Fake game for testing",
+      "home":"Arsenal","away":"Chelsea","homeAbbr":"ARS","awayAbbr":"CHE","start":"\(iso(launchedAt.addingTimeInterval(-3600)))",
+      "state":"in","statusText":"67'","score":{"home":"2","away":"1"},"tier":1,"hideScore":true,
+      "watch":{"options":[{"name":"Sky Sports","owned":true,"url":"https://www.skysports.com/watch"}]},"why":"Debug: fake live game."},
+     {"id":"fake-2","sport":"basketball","league":"NBA","title":"Celtics at Knicks","detail":"Fake game for testing",
+      "home":"Knicks","away":"Celtics","homeAbbr":"NYK","awayAbbr":"BOS","start":"\(iso(launchedAt.addingTimeInterval(360)))",
+      "state":"pre","tier":2,"watch":{"options":[{"name":"NBA League Pass","owned":true,"url":"https://www.nba.com/watch"}]},
+      "why":"Debug: fake game about to start."}]
+    """
+    return (try? JSONDecoder().decode([Event].self, from: Data(json.utf8))) ?? []
+}
+
 final class Store: ObservableObject {
     @Published var events: [Event] = []
     @Published var now = Date()
     @Published var revealed: Set<String> = []
     @Published var pulse = false
     @Published var hover = false
+    /// The game picked in the switcher. Cleared once that game is no longer on, which brings back the automatic choice.
+    @Published var selectedId: String?
+    /// Show the island all day (next game when nothing is on), as the app used to.
+    @Published var alwaysShow = UserDefaults.standard.bool(forKey: "alwaysShowIsland") {
+        didSet { UserDefaults.standard.set(alwaysShow, forKey: "alwaysShowIsland") }
+    }
+    /// Something is live, about to start, or finished under five minutes ago: the island should be up.
+    @Published private(set) var onAir = false
     /// Current size of the visible pill, reported by the view, used for hit-testing the mouse.
     var pillSize = CGSize(width: 290, height: 30)
     @Published var loaded = false
-    private var lastLiveTop: String?
+    private var liveIds: Set<String> = []
+    private var lastActive: Date?
+    private var lingerId: String?
+    /// Events whose state has come from the ESPN poll, so their `pre` can be trusted over the clock.
+    private var polled: Set<String> = []
     private var timers: [Timer] = []
 
     func start() {
@@ -133,24 +165,56 @@ final class Store: ObservableObject {
 
     func isLive(_ e: Event) -> Bool {
         if e.state == "in" { return true }
-        guard e.state == "pre", e.timeTbc != true else { return false }
+        // Fallback for events the feed has not reported on: assume on from the start time for a typical length.
+        guard e.state == "pre", e.timeTbc != true, !polled.contains(e.id) else { return false }
         let elapsed = now.timeIntervalSince(e.date)
         return elapsed >= 0 && elapsed < e.hours * 3600
     }
+    /// Starts within ten minutes, or the feed says it has not started yet although the start time has passed (delayed).
+    func isSoon(_ e: Event) -> Bool {
+        guard e.state == "pre", e.timeTbc != true, !isLive(e) else { return false }
+        let until = e.date.timeIntervalSince(now)
+        if until > 0 { return until <= 600 }
+        return polled.contains(e.id) && -until < e.hours * 3600
+    }
+    func isActive(_ e: Event) -> Bool { e.timeTbc != true && (isLive(e) || isSoon(e)) }
+    func isEnded(_ e: Event) -> Bool { e.state == "post" || (!isActive(e) && e.date < now) }
+
+    /// Games that keep the island up, best first: live before about-to-start, then tier 1, picks, tier 2.
+    var active: [Event] {
+        events.filter(isActive).sorted { a, b in
+            (isLive(a) ? 0 : 1, a.rank, a.date) < (isLive(b) ? 0 : 1, b.rank, b.date)
+        }
+    }
+    var chosen: Event? { active.first { $0.id == selectedId } ?? active.first }
     var live: [Event] { events.filter(isLive).sorted { $0.rank < $1.rank } }
     var upcoming: [Event] {
         events.filter { !isLive($0) && $0.state != "post" && $0.timeTbc != true && $0.date > now }
     }
     /// The single answer to "what should I put on?": the best live game, else the next one worth knowing about.
     var top: Event? { live.first ?? upcoming.first { $0.rank < 2 } ?? upcoming.first }
+    /// The game the island shows: the chosen active one, the one that just finished, or (always-show) the next one.
+    var shown: Event? {
+        if let c = chosen { return c }
+        if onAir, let id = lingerId, let e = events.first(where: { $0.id == id }) { return e }
+        return alwaysShow ? top : nil
+    }
     var later: [Event] {
-        let t = top?.id
-        return Array((live.dropFirst() + upcoming).filter { $0.id != t }.prefix(3))
+        let s = shown?.id
+        let pool = (active.count > 1 ? [] : active) + upcoming.filter { !isActive($0) }
+        return Array(pool.filter { $0.id != s }.prefix(3))
     }
     func scoreHidden(_ e: Event) -> Bool { e.hideScore == true && !revealed.contains(e.id) }
+    func hasScore(_ e: Event) -> Bool { e.score != nil && (isLive(e) || e.state == "post") }
+
+    func select(_ e: Event) {
+        selectedId = e.id
+        refreshOnAir()
+    }
 
     func whenText(_ e: Event) -> String {
         let mins = Int(e.date.timeIntervalSince(now) / 60)
+        if mins < 0 { return "starting" }
         if mins < 60 { return "in \(max(mins, 1)) min" }
         if Calendar.current.isDateInToday(e.date) { return timeFormatter.string(from: e.date) }
         return "\(dayFormatter.string(from: e.date)) \(timeFormatter.string(from: e.date))"
@@ -162,7 +226,7 @@ final class Store: ObservableObject {
         URLSession.shared.dataTask(with: req) { [weak self] data, _, _ in
             guard let data = data, let p = try? JSONDecoder().decode(Payload.self, from: data) else { return }
             DispatchQueue.main.async {
-                self?.events = p.events
+                self?.events = p.events + (fakeLive ? fakeEvents() : [])
                 let first = self?.loaded == false
                 self?.loaded = true
                 self?.tick()
@@ -175,12 +239,25 @@ final class Store: ObservableObject {
     func tick() {
         now = Date()
         // Poll live scores directly for anything on now or starting within ten minutes.
-        let hot = events.filter { $0.feed != nil && $0.state != "post" && (isLive($0) || abs($0.date.timeIntervalSince(now)) < 600) }
+        let hot = events.filter { $0.feed != nil && $0.state != "post" && (isActive($0) || abs($0.date.timeIntervalSince(now)) < 600) }
         for feed in Set(hot.compactMap { $0.feed }) { poll(feed) }
-        if let t = live.first, t.id != lastLiveTop {
-            if lastLiveTop != nil || loaded { announce() }
-            lastLiveTop = t.id
-        } else if live.isEmpty { lastLiveTop = nil }
+        refreshOnAir()
+    }
+
+    /// Works out whether the island should be up, drops a stale selection, and opens the island when a game goes live.
+    func refreshOnAir() {
+        let a = active
+        if let s = selectedId, !a.contains(where: { $0.id == s }) { selectedId = nil }
+        if let c = chosen {
+            lastActive = now
+            lingerId = c.id
+        }
+        let on = !a.isEmpty || (lastActive.map { now.timeIntervalSince($0) < 300 } ?? false)
+        if !on { lingerId = nil }
+        if on != onAir { onAir = on }
+        let ids = Set(live.filter { $0.timeTbc != true }.map(\.id))
+        if loaded, !ids.subtracting(liveIds).isEmpty { announce() }
+        liveIds = ids
     }
 
     func announce() {
@@ -217,11 +294,12 @@ final class Store: ObservableObject {
                 for i in changed.indices where changed[i].feed == feed {
                     let espnId = changed[i].id.components(separatedBy: "-").dropFirst().joined(separator: "-")
                     guard let u = updates[espnId] else { continue }
-                    if let st = u.0 { changed[i].state = st }
+                    if let st = u.0 { changed[i].state = st; self.polled.insert(changed[i].id) }
                     if let d = u.1 { changed[i].statusText = d }
                     if changed[i].state != "pre" { changed[i].score = Score(home: u.2, away: u.3) }
                 }
                 self.events = changed
+                self.refreshOnAir()
             }
         }.resume()
     }
@@ -257,22 +335,30 @@ struct IslandView: View {
     private var collapsedWidth: CGFloat { notchWidth > 0 ? notchWidth + 250 : 290 }
 
     private var collapsedRow: some View {
-        let t = store.top
+        let t = store.shown
         let live = t.map(store.isLive) ?? false
+        let ended = t.map(store.isEnded) ?? false
+        let others = store.active.filter { $0.id != t?.id }.count
         let left: String = {
             guard let t = t else { return store.loaded ? "Nothing on" : "Sport Brain" }
-            if live && t.score != nil && !store.scoreHidden(t) { return t.scoreLine }
+            if store.hasScore(t) && !store.scoreHidden(t) { return t.scoreLine }
             return t.matchup
         }()
         let right: String = {
             guard let t = t else { return "" }
             if live { return store.scoreHidden(t) ? "LIVE" : String((t.statusText ?? "LIVE").prefix(16)) }
+            if ended { return store.scoreHidden(t) ? "Ended" : String((t.statusText ?? "Ended").prefix(16)) }
             return store.whenText(t)
         }()
         return HStack(spacing: 7) {
             Text(t?.emoji ?? "🏟️").font(.system(size: 12))
             if live { Circle().fill(Color.red).frame(width: 6, height: 6) }
             Text(left).font(.system(size: 12, weight: .semibold)).monospacedDigit().lineLimit(1)
+            if others > 0 {
+                Text("+\(others)").font(.system(size: 10, weight: .bold)).foregroundStyle(.white.opacity(0.7))
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(Capsule().fill(Color.white.opacity(0.16)))
+            }
             Spacer(minLength: notchWidth > 0 ? notchWidth : 8)
             Text(right).font(.system(size: 12, weight: .medium)).monospacedDigit().lineLimit(1)
                 .foregroundStyle(live ? Color.red : Color.white.opacity(0.62))
@@ -283,16 +369,18 @@ struct IslandView: View {
 
     @ViewBuilder private var expandedBody: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if let t = store.top {
+            if store.active.count > 1 { switcher.padding(.bottom, 12) }
+            if let t = store.shown {
                 let live = store.isLive(t)
-                Text(live ? "ON NOW" : "NEXT UP · \(store.whenText(t).uppercased())")
+                let ended = store.isEnded(t)
+                Text(live ? "ON NOW" : ended ? "FINISHED" : store.isSoon(t) ? "STARTING · \(store.whenText(t).uppercased())" : "NEXT UP · \(store.whenText(t).uppercased())")
                     .font(.system(size: 11, weight: .bold)).kerning(0.5)
-                    .foregroundStyle(live ? Color.red : Color.blue)
+                    .foregroundStyle(live ? Color.red : ended ? Color.white.opacity(0.55) : Color.blue)
                 Text((t.isMine ? "★ " : "") + t.title)
                     .font(.system(size: 18, weight: .bold)).padding(.top, 5).fixedSize(horizontal: false, vertical: true)
                 Text([t.detail, t.league].compactMap { $0 }.joined(separator: " · "))
                     .font(.system(size: 12)).foregroundStyle(.white.opacity(0.6)).padding(.top, 2)
-                if live, t.score != nil {
+                if store.hasScore(t) {
                     if store.scoreHidden(t) {
                         Button("Score hidden · show") { store.revealed.insert(t.id) }
                             .buttonStyle(PillButton(fill: Color.white.opacity(0.14))).padding(.top, 9)
@@ -341,6 +429,30 @@ struct IslandView: View {
         .foregroundStyle(.white)
         .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One chip per game that is on or about to start; clicking one shows it in the pill and the detail below.
+    private var switcher: some View {
+        let current = store.shown?.id
+        return HStack(spacing: 6) {
+            ForEach(Array(store.active.prefix(4))) { e in
+                let selected = e.id == current
+                Button { store.select(e) } label: {
+                    HStack(spacing: 5) {
+                        Text(e.emoji).font(.system(size: 11))
+                        if store.isLive(e) { Circle().fill(Color.red).frame(width: 5, height: 5) }
+                        Text(e.matchup).font(.system(size: 11, weight: .semibold)).lineLimit(1)
+                    }
+                    .foregroundStyle(.white.opacity(selected ? 1 : 0.7))
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Capsule().fill(Color.white.opacity(selected ? 0.26 : 0.09)))
+                    .overlay(Capsule().strokeBorder(Color.white.opacity(selected ? 0.45 : 0), lineWidth: 1))
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+        }
     }
 }
 
@@ -429,12 +541,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if inside != store.hover { store.hover = inside }
     }
 
+    /// The island is on screen only while a game is on (or just finished), unless "Always show island" is ticked.
+    /// Otherwise the panel is ordered out, so nothing is drawn and nothing catches clicks.
+    func applyVisibility() {
+        guard let p = panel else { return }
+        let want = !islandHidden && (store.alwaysShow || store.onAir)
+        if want, !p.isVisible {
+            p.orderFrontRegardless()
+        } else if !want, p.isVisible {
+            p.orderOut(nil)
+            if store.hover { store.hover = false }
+        }
+    }
+
     /// Pins the island to the top centre of the main screen. On a notched display it wraps the notch.
     func layout() {
-        guard !islandHidden, let screen = NSScreen.main ?? NSScreen.screens.first else {
-            panel?.orderOut(nil)
-            return
-        }
+        guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
         let p = panel ?? IslandPanel()
         panel = p
         var notch: CGFloat = 0
@@ -446,38 +568,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let size = NSSize(width: 520, height: 420)
         p.setFrame(NSRect(x: screen.frame.midX - size.width / 2, y: screen.frame.maxY - size.height, width: size.width, height: size.height), display: true)
         p.contentView = ClickThroughHostingView(rootView: IslandView(store: store, notchWidth: notch, barHeight: bar))
-        p.orderFrontRegardless()
+        applyVisibility()
     }
 
-    /// With the island showing, the menu bar item is just an icon. With it hidden, the item carries the text.
+    /// With the island switched on, the menu bar item is just an icon. With it switched off, the item carries the text.
     func refreshStatus() {
+        applyVisibility()
         guard let button = statusItem.button else { return }
-        guard islandHidden, let t = store.top else {
-            button.title = store.top?.emoji ?? "🏟️"
+        let shown = store.shown ?? store.top
+        guard islandHidden, let t = shown else {
+            button.title = shown?.emoji ?? "🏟️"
             return
         }
         let live = store.isLive(t)
-        if live && t.score != nil && !store.scoreHidden(t) { button.title = "\(t.emoji) \(t.scoreLine)" }
-        else { button.title = "\(t.emoji) \(t.matchup) · \(live ? "LIVE" : store.whenText(t))" }
+        if store.hasScore(t) && !store.scoreHidden(t) { button.title = "\(t.emoji) \(t.scoreLine)" }
+        else { button.title = "\(t.emoji) \(t.matchup) · \(live ? "LIVE" : store.isEnded(t) ? "Ended" : store.whenText(t))" }
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        let items = (store.top.map { [$0] } ?? []) + store.later
+        var items: [Event] = []
+        for e in (store.shown.map { [$0] } ?? []) + store.active + store.upcoming where !items.contains(where: { $0.id == e.id }) {
+            items.append(e)
+        }
+        items = Array(items.prefix(5))
         if items.isEmpty { menu.addItem(NSMenuItem(title: "Nothing on the schedule", action: nil, keyEquivalent: "")) }
         for e in items {
-            let when = store.isLive(e) ? "LIVE" : store.whenText(e)
+            let when = store.isLive(e) ? "LIVE" : store.isEnded(e) ? "Ended" : store.whenText(e)
             let item = ClosureItem("\(e.emoji)  \(e.isMine ? "★ " : "")\(e.title) · \(when) · \(e.whereText)") {
                 NSWorkspace.shared.open(e.link?.url.flatMap { URL(string: $0) } ?? pageURL)
             }
             menu.addItem(item)
+        }
+        // Same choice as the island's switcher: which of the games on now the island shows.
+        let active = store.active
+        if active.count > 1 {
+            menu.addItem(.separator())
+            menu.addItem(NSMenuItem(title: "Show in island", action: nil, keyEquivalent: ""))
+            let current = store.shown?.id
+            for e in active {
+                let item = ClosureItem("\(e.emoji)  \(e.matchup) · \(store.isLive(e) ? "LIVE" : store.whenText(e))",
+                                       checked: e.id == current) { [weak self] in self?.store.select(e) }
+                item.indentationLevel = 1
+                menu.addItem(item)
+            }
         }
         menu.addItem(.separator())
         menu.addItem(ClosureItem("Open Sport Brain") { NSWorkspace.shared.open(pageURL) })
         menu.addItem(ClosureItem("Show island", checked: !islandHidden) { [weak self] in
             guard let self = self else { return }
             self.islandHidden.toggle()
-            self.layout()
+            self.refreshStatus()
+        })
+        menu.addItem(ClosureItem("Always show island", checked: store.alwaysShow) { [weak self] in
+            guard let self = self else { return }
+            self.store.alwaysShow.toggle()
             self.refreshStatus()
         })
         let loginOn = SMAppService.mainApp.status == .enabled
