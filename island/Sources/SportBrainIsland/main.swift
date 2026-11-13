@@ -153,8 +153,17 @@ enum AppleTV {
             p.arguments = [script.path, "launch", key] + (url.map { ["--url", $0] } ?? [])
             let pipe = Pipe()
             p.standardOutput = pipe
-            p.standardError = FileHandle.nullDevice
+            // The launcher's stderr goes to ~/Library/Logs/SportBrain/appletv.log, so failures can be diagnosed.
+            let logDir = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/SportBrain")
+            try? FileManager.default.createDirectory(at: logDir, withIntermediateDirectories: true)
+            let logURL = logDir.appendingPathComponent("appletv.log")
+            if !FileManager.default.fileExists(atPath: logURL.path) { FileManager.default.createFile(atPath: logURL.path, contents: nil) }
+            let log = try? FileHandle(forWritingTo: logURL)
+            log?.seekToEndOfFile()
+            log?.write(Data("\n[\(Date())] launch \(key)\(url.map { " --url \($0)" } ?? "")\n".utf8))
+            p.standardError = log ?? FileHandle.nullDevice
             var failure: String?
+            defer { try? log?.close() }
             do {
                 try p.run()
                 let killer = DispatchWorkItem { if p.isRunning { p.terminate() } }
@@ -167,6 +176,7 @@ enum AppleTV {
                 if p.terminationStatus != 0 || json?["ok"] as? Bool != true {
                     failure = (json?["error"] as? String) ?? (p.terminationReason == .uncaughtSignal ? "Apple TV timed out" : "Apple TV didn't respond")
                 }
+                log?.write(Data("result: \(failure ?? "ok") (exit \(p.terminationStatus))\n".utf8))
             } catch {
                 failure = "Couldn't start the launcher"
             }
@@ -669,6 +679,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSEvent.addLocalMonitorForEvents(matching: [.mouseMoved, .leftMouseDragged]) { [weak self] e in self?.trackPointer(); return e }
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in self?.trackPointer() }
         store.start()
+        // Debug: `--tv-test KEY` sends KEY's app to the Apple TV once at launch, the same way the button does.
+        if let i = CommandLine.arguments.firstIndex(of: "--tv-test"), i + 1 < CommandLine.arguments.count {
+            AppleTV.launch(key: CommandLine.arguments[i + 1], url: nil) { err in NSLog("tv-test: \(err ?? "ok")") }
+        }
         layout()
         refreshStatus()
     }
