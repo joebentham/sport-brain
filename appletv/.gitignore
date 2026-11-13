@@ -1,0 +1,5 @@
+# Pairing credentials and the app map live in ~/Library/Application Support/SportBrain, never here.
+*credentials*.json
+appletv.json
+__pycache__/
+*.pyc

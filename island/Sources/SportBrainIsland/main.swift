@@ -19,6 +19,8 @@ struct Tier: Codable, Equatable {
 }
 
 struct WatchOption: Codable {
+    /// Service key from config.json (`hulu`, `espn`, ...), used to pick the tvOS app.
+    let key: String?
     let name: String
     let owned: Bool?
     let url: String?
@@ -80,6 +82,13 @@ struct Event: Codable, Identifiable {
     }
     /// The service to open: the first one that is owned or unconfirmed.
     var link: WatchOption? { watch.options.first { $0.owned != false && $0.url != nil } }
+    /// The service to send to the Apple TV: the first owned-or-unconfirmed option whose tvOS app is installed there.
+    var tvTarget: (option: WatchOption, app: String)? {
+        for o in watch.options where o.owned != false {
+            if let k = o.key, let app = AppleTV.appName(for: k) { return (o, app) }
+        }
+        return nil
+    }
     var whereText: String {
         if let l = link { return l.name + (l.owned == nil ? "?" : "") }
         if let first = watch.options.first { return "Not on your services (\(first.name))" }
@@ -94,6 +103,91 @@ struct Event: Codable, Identifiable {
         let hs = shortScore(score?.home), as_ = shortScore(score?.away)
         return awayFirst ? "\(a) \(as_)  \(h) \(hs)" : "\(h) \(hs)  \(a) \(as_)"
     }
+}
+
+// MARK: - Apple TV
+
+/// Bridge to appletv/sportbrain_atv.py (copied into the app bundle by build.sh), which wakes the Apple TV and
+/// opens the app over pyatv. Ready once appletv/setup.sh has made the Python environment and paired.
+enum AppleTV {
+    static let support = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Application Support/SportBrain")
+    static var python: URL { support.appendingPathComponent("venv/bin/python") }
+    static var script: URL? { Bundle.main.url(forResource: "sportbrain_atv", withExtension: "py") }
+    static var setupScript: URL? { Bundle.main.url(forResource: "setup", withExtension: "sh") }
+    private static var cache: (stamp: Date, apps: [String: String])?
+
+    /// Service key -> installed tvOS app name, from appletv.json (written at pairing). Empty when not set up.
+    static var apps: [String: String] {
+        let fm = FileManager.default
+        let map = support.appendingPathComponent("appletv.json")
+        guard fm.isExecutableFile(atPath: python.path), script != nil,
+              fm.fileExists(atPath: support.appendingPathComponent("appletv-credentials.json").path),
+              let stamp = (try? fm.attributesOfItem(atPath: map.path))?[.modificationDate] as? Date else { return [:] }
+        if let c = cache, c.stamp == stamp { return c.apps }
+        var apps: [String: String] = [:]
+        if let data = try? Data(contentsOf: map),
+           let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let m = root["apps"] as? [String: [String: Any]] {
+            for (k, v) in m { if let n = v["name"] as? String { apps[k] = n } }
+        }
+        cache = (stamp, apps)
+        return apps
+    }
+    static var isReady: Bool { !apps.isEmpty }
+    static func appName(for key: String) -> String? { apps[key] }
+
+    /// A link worth handing to tvOS instead of just opening the app: only Apple TV app item pages for now,
+    /// since no other service in the feed has a documented deep link to a live event.
+    static func deepLink(_ o: WatchOption) -> String? {
+        guard o.key == "appletv", let s = o.url, let u = URL(string: s), u.host == "tv.apple.com", u.path.count > 1 else { return nil }
+        return s
+    }
+
+    /// Runs the launcher off the main thread; calls back on main with nil on success or a short error.
+    static func launch(key: String, url: String?, done: @escaping (String?) -> Void) {
+        guard let script = script else { done("Launcher missing from the app"); return }
+        DispatchQueue.global(qos: .userInitiated).async {
+            let p = Process()
+            p.executableURL = python
+            p.arguments = [script.path, "launch", key] + (url.map { ["--url", $0] } ?? [])
+            let pipe = Pipe()
+            p.standardOutput = pipe
+            p.standardError = FileHandle.nullDevice
+            var failure: String?
+            do {
+                try p.run()
+                let killer = DispatchWorkItem { if p.isRunning { p.terminate() } }
+                DispatchQueue.global().asyncAfter(deadline: .now() + 40, execute: killer)
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                p.waitUntilExit()
+                killer.cancel()
+                let last = String(decoding: data, as: UTF8.self).split(separator: "\n").last.map(String.init) ?? ""
+                let json = (try? JSONSerialization.jsonObject(with: Data(last.utf8))) as? [String: Any]
+                if p.terminationStatus != 0 || json?["ok"] as? Bool != true {
+                    failure = (json?["error"] as? String) ?? (p.terminationReason == .uncaughtSignal ? "Apple TV timed out" : "Apple TV didn't respond")
+                }
+            } catch {
+                failure = "Couldn't start the launcher"
+            }
+            DispatchQueue.main.async { done(failure) }
+        }
+    }
+
+    /// Opens the one-time setup (environment + pairing) in Terminal.
+    static func openSetup() {
+        guard let s = setupScript else { return }
+        NSWorkspace.shared.open([s], withApplicationAt: URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app"),
+                                configuration: NSWorkspace.OpenConfiguration())
+    }
+}
+
+/// Feedback for the last "Watch on Apple TV" press, shown in the island and the menu bar for a few seconds.
+struct TVNote {
+    enum Phase { case sending, done, failed }
+    let id: String
+    let phase: Phase
+    let text: String
 }
 
 struct Payload: Codable {
@@ -124,7 +218,8 @@ func fakeEvents() -> [Event] {
     [{"id":"fake-1","sport":"soccer","league":"Premier League","title":"Arsenal v Chelsea","detail":"Fake game for testing",
       "home":"Arsenal","away":"Chelsea","homeAbbr":"ARS","awayAbbr":"CHE","start":"\(iso(launchedAt.addingTimeInterval(-3600)))",
       "state":"in","statusText":"67'","score":{"home":"2","away":"1"},"tier":1,"hideScore":true,
-      "watch":{"options":[{"name":"Sky Sports","owned":true,"url":"https://www.skysports.com/watch"}]},"why":"Debug: fake live game."},
+      "watch":{"options":[{"name":"Sky Sports","owned":true,"url":"https://www.skysports.com/watch"},
+        {"key":"peacock","name":"Peacock","owned":true,"url":"https://www.peacocktv.com/sports/live-and-upcoming"}]},"why":"Debug: fake live game."},
      {"id":"fake-2","sport":"basketball","league":"NBA","title":"Celtics at Knicks","detail":"Fake game for testing",
       "home":"Knicks","away":"Celtics","homeAbbr":"NYK","awayAbbr":"BOS","start":"\(iso(launchedAt.addingTimeInterval(360)))",
       "state":"pre","tier":2,"watch":{"options":[{"name":"NBA League Pass","owned":true,"url":"https://www.nba.com/watch"}]},
@@ -210,6 +305,39 @@ final class Store: ObservableObject {
     func select(_ e: Event) {
         selectedId = e.id
         refreshOnAir()
+    }
+
+    @Published var tvNote: TVNote?
+    private var tvNoteClear: DispatchWorkItem?
+
+    func openOnMac(_ e: Event) {
+        NSWorkspace.shared.open(e.link?.url.flatMap { URL(string: $0) } ?? pageURL)
+    }
+
+    /// Wakes the Apple TV and opens the game's app there. If that fails, says so and opens it on this Mac instead.
+    func watchOnTV(_ e: Event) {
+        guard let t = e.tvTarget, let key = t.option.key else { openOnMac(e); return }
+        if tvNote?.phase == .sending { return }
+        setNote(TVNote(id: e.id, phase: .sending, text: "Sending \(t.app) to Apple TV…"), clearAfter: nil)
+        AppleTV.launch(key: key, url: AppleTV.deepLink(t.option)) { [weak self] err in
+            guard let self = self else { return }
+            if let err = err {
+                NSLog("Apple TV launch failed: \(err)")
+                self.setNote(TVNote(id: e.id, phase: .failed, text: "Apple TV didn't respond · opened here"), clearAfter: 7)
+                self.openOnMac(e)
+            } else {
+                self.setNote(TVNote(id: e.id, phase: .done, text: "\(t.app) is opening on Apple TV"), clearAfter: 6)
+            }
+        }
+    }
+
+    private func setNote(_ n: TVNote, clearAfter: Double?) {
+        tvNoteClear?.cancel()
+        tvNote = n
+        guard let s = clearAfter else { return }
+        let w = DispatchWorkItem { [weak self] in self?.tvNote = nil }
+        tvNoteClear = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + s, execute: w)
     }
 
     func whenText(_ e: Event) -> String {
@@ -395,7 +523,15 @@ struct IslandView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 HStack(spacing: 8) {
-                    if let l = t.link, let s = l.url, let url = URL(string: s) {
+                    if let tv = t.tvTarget {
+                        let sending = store.tvNote?.phase == .sending
+                        Button(sending ? "Sending to Apple TV…" : "▶ \(tv.app) on Apple TV") { store.watchOnTV(t) }
+                            .buttonStyle(PillButton(fill: .blue)).disabled(sending)
+                        if t.link?.url != nil {
+                            Button("Open on this Mac") { store.openOnMac(t) }
+                                .buttonStyle(PillButton(fill: Color.white.opacity(0.14)))
+                        }
+                    } else if let l = t.link, let s = l.url, let url = URL(string: s) {
                         Button("▶ Watch on \(t.whereText)") { NSWorkspace.shared.open(url) }
                             .buttonStyle(PillButton(fill: .blue))
                     } else {
@@ -403,10 +539,15 @@ struct IslandView: View {
                             .padding(.horizontal, 12).padding(.vertical, 7)
                             .background(Capsule().fill(Color.white.opacity(0.12)))
                     }
-                    Button("Open board") { NSWorkspace.shared.open(pageURL) }
+                    Button(t.tvTarget == nil ? "Open board" : "Board") { NSWorkspace.shared.open(pageURL) }
                         .buttonStyle(PillButton(fill: Color.white.opacity(0.14)))
                 }
                 .padding(.top, 12)
+                if let n = store.tvNote, n.id == t.id {
+                    Text(n.text).font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(n.phase == .failed ? Color.orange : n.phase == .done ? Color.green : Color.white.opacity(0.7))
+                        .padding(.top, 8)
+                }
             } else {
                 Text(store.loaded ? "Nothing on the schedule right now." : "Loading…")
                     .font(.system(size: 13)).foregroundStyle(.white.opacity(0.7))
@@ -575,6 +716,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func refreshStatus() {
         applyVisibility()
         guard let button = statusItem.button else { return }
+        if let n = store.tvNote {  // feedback for a menu-bar "Watch on Apple TV"
+            button.title = "📺 " + (n.phase == .sending ? "Sending…" : n.phase == .done ? "On Apple TV" : "Apple TV failed")
+            return
+        }
         let shown = store.shown ?? store.top
         guard islandHidden, let t = shown else {
             button.title = shown?.emoji ?? "🏟️"
@@ -595,10 +740,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if items.isEmpty { menu.addItem(NSMenuItem(title: "Nothing on the schedule", action: nil, keyEquivalent: "")) }
         for e in items {
             let when = store.isLive(e) ? "LIVE" : store.isEnded(e) ? "Ended" : store.whenText(e)
-            let item = ClosureItem("\(e.emoji)  \(e.isMine ? "★ " : "")\(e.title) · \(when) · \(e.whereText)") {
-                NSWorkspace.shared.open(e.link?.url.flatMap { URL(string: $0) } ?? pageURL)
+            let title = "\(e.emoji)  \(e.isMine ? "★ " : "")\(e.title) · \(when) · \(e.whereText)"
+            if let tv = e.tvTarget {
+                // Same choice as the island: Apple TV first, this Mac second.
+                let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+                let sub = NSMenu()
+                sub.addItem(ClosureItem("📺  Watch on Apple TV (\(tv.app))") { [weak self] in self?.store.watchOnTV(e) })
+                sub.addItem(ClosureItem("💻  Open on this Mac") { [weak self] in self?.store.openOnMac(e) })
+                item.submenu = sub
+                menu.addItem(item)
+            } else {
+                menu.addItem(ClosureItem(title) { [weak self] in self?.store.openOnMac(e) })
             }
-            menu.addItem(item)
         }
         // Same choice as the island's switcher: which of the games on now the island shows.
         let active = store.active
@@ -615,6 +768,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(.separator())
         menu.addItem(ClosureItem("Open Sport Brain") { NSWorkspace.shared.open(pageURL) })
+        menu.addItem(ClosureItem(AppleTV.isReady ? "Re-pair Apple TV…" : "Set up Apple TV…") { AppleTV.openSetup() })
         menu.addItem(ClosureItem("Show island", checked: !islandHidden) { [weak self] in
             guard let self = self else { return }
             self.islandHidden.toggle()
