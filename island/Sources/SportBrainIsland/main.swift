@@ -261,12 +261,9 @@ final class Store: ObservableObject {
     /// Events whose state has come from the ESPN poll, so their `pre` can be trusted over the clock.
     private var polled: Set<String> = []
     private var timers: [Timer] = []
-    /// Per game: the match phase the feed last reported, when we first saw it, and whether we saw it begin.
-    private var phase: [String: (name: String, since: Date, observed: Bool)] = [:]
-
     /// ESPN's match clock for rugby (and at times football) sticks for minutes on end, e.g. "1'" ten minutes in.
-    /// When the feed's minute lags, count the minutes ourselves from the moment the half began. If we did not
-    /// see the half begin (the app started mid-game), count from the scheduled time and mark it "~" as approximate.
+    /// A guessed minute proved wrong in use (the real kick-off is later than the scheduled one), so when the
+    /// feed's minute is not keeping pace, show only what is certain: which half it is.
     private func liveClock(_ e: Event, phaseName: String?, feedText: String?) -> String? {
         let half: Int
         switch e.sport {
@@ -275,26 +272,16 @@ final class Store: ObservableObject {
         default: return feedText
         }
         guard let name = phaseName else { return feedText }
-        let prev = phase[e.id]
-        if prev?.name != name {
-            let sawItStart = prev != nil || (polled.contains(e.id) && e.state == "pre")
-            phase[e.id] = (name, now, sawItStart)
-        }
-        guard let p = phase[e.id] else { return feedText }
-        if name.contains("HALFTIME") { return "HT" }
-        let base: Int, anchor: Date
-        if name.contains("FIRST_HALF") {
-            base = 0
-            anchor = p.observed ? p.since : e.date
-        } else if name.contains("SECOND_HALF") {
-            base = half
-            anchor = p.observed ? p.since : e.date.addingTimeInterval(Double(half + 18) * 60)
-        } else { return feedText }
-        let est = base + max(Int(now.timeIntervalSince(anchor) / 60) + 1, 1)
+        if name.contains("HALFTIME") { return "Half-time" }
+        let second = name.contains("SECOND_HALF")
+        guard second || name.contains("FIRST_HALF") else { return feedText }
+        // Minutes since the scheduled start, less the first half and break when in the second half.
+        let sinceStart = Int(now.timeIntervalSince(e.date) / 60) - (second ? half + 15 : 0)
         let feedMinute = feedText.flatMap { Int($0.trimmingCharacters(in: CharacterSet.decimalDigits.inverted)) }
-        if let f = feedMinute, f >= est - 1 { return feedText }
-        let cap = base + half
-        return (p.observed ? "" : "~") + (est > cap ? "\(cap)+'" : "\(est)'")
+        let feedInHalf = feedMinute.map { $0 - (second ? half : 0) }
+        // Trust the feed's minute only while it is within a few minutes of where the game must roughly be.
+        if let f = feedInHalf, f >= sinceStart - 8 { return feedText }
+        return second ? "2nd half" : "1st half"
     }
 
     func start() {
