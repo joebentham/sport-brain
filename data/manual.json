@@ -6,10 +6,10 @@
     "title": "Grand Slam of Darts: opening session",
     "start": "2026-11-14T13:00:00.000Z",
     "tier": "marquee",
-    "why": "Stephen Bunting plays Raymond Smith in the first session; Littler v Greaves follows in the 2:00 PM session. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "why": "Stephen Bunting plays Raymond Smith in the first session; Littler v Greaves follows in the 2:00 PM session.",
     "watchKeys": [
-      "peacock",
-      "espn"
+      "espn",
+      "hulu"
     ]
   },
   {
@@ -19,10 +19,10 @@
     "title": "Grand Slam of Darts: Sunday afternoon session",
     "start": "2026-11-15T13:00:00.000Z",
     "tier": "wildcard",
-    "why": "Second day of group matches. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "why": "Second day of group matches.",
     "watchKeys": [
-      "peacock",
-      "espn"
+      "espn",
+      "hulu"
     ]
   },
   {
@@ -32,10 +32,10 @@
     "title": "Grand Slam of Darts: Monday session",
     "start": "2026-11-16T19:00:00.000Z",
     "tier": "wildcard",
-    "why": "Group stage continues. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "why": "Group stage continues.",
     "watchKeys": [
-      "peacock",
-      "espn"
+      "espn",
+      "hulu"
     ]
   },
   {
@@ -45,10 +45,10 @@
     "title": "Grand Slam of Darts: Tuesday session",
     "start": "2026-11-17T19:00:00.000Z",
     "tier": "wildcard",
-    "why": "Group stage concludes. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "why": "Group stage concludes.",
     "watchKeys": [
-      "peacock",
-      "espn"
+      "espn",
+      "hulu"
     ]
   },
   {
@@ -58,10 +58,10 @@
     "title": "Grand Slam of Darts: Wednesday session",
     "start": "2026-11-18T19:00:00.000Z",
     "tier": "wildcard",
-    "why": "Second round begins. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "why": "Second round begins.",
     "watchKeys": [
-      "peacock",
-      "espn"
+      "espn",
+      "hulu"
     ]
   },
   {
@@ -71,10 +71,10 @@
     "title": "Grand Slam of Darts: Thursday session",
     "start": "2026-11-19T19:00:00.000Z",
     "tier": "wildcard",
-    "why": "Second round continues. Listed on Peacock by NBC, though ESPN has also been reported as the rights holder, so check both.",
+    "why": "Second round continues.",
     "watchKeys": [
-      "peacock",
-      "espn"
+      "espn",
+      "hulu"
     ]
   },
   {
