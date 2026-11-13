@@ -189,7 +189,12 @@ const wdf = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 const mdf = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
 const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-const EMOJI = { soccer: '⚽️', football: '🏈', cricket: '🏏', rugby: '🏉', darts: '🎯', basketball: '🏀', hockey: '🏒', baseball: '⚾️', curling: '🥌', tennis: '🎾', golf: '⛳️', f1: '🏎️', boxing: '🥊', cycling: '🚴' };
+const EMOJI = { soccer: '⚽️', football: '🏈', cricket: '🏏', rugby: '🏉', darts: '🎯', basketball: '🏀', hockey: '🏒', baseball: '⚾️', curling: '🥌', tennis: '🎾', golf: '⛳️', f1: '🏎️', boxing: '🥊', cycling: '🚴',
+  snooker: '🎱', pool: '🎱', bowling: '🎳', running: '🏃', athletics: '🏃', marathon: '🏃', skating: '⛸️', 'figure skating': '⛸️',
+  skiing: '⛷️', snowboarding: '🏂', motorsport: '🏁', nascar: '🏁', indycar: '🏁', motogp: '🏍️', sumo: '🤼', wrestling: '🤼',
+  mma: '🥋', ufc: '🥋', swimming: '🏊', rowing: '🚣', sailing: '⛵️', horse: '🏇', racing: '🏇', 'horse racing': '🏇',
+  volleyball: '🏐', handball: '🤾', badminton: '🏸', 'table tennis': '🏓', chess: '♟️', esports: '🎮', lacrosse: '🥍', triathlon: '🏊' };
+const icon = (sport) => EMOJI[String(sport || '').toLowerCase()] || '🏟️';
 // Rough "probably still on" lengths in hours, used when the hourly data has not caught up with a live game.
 const LEN = { cricket: 8, football: 3.5, baseball: 3.5, darts: 9, soccer: 2, rugby: 2, basketball: 2.5, hockey: 2.5 };
 const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/';
@@ -243,7 +248,7 @@ function hero(e, now) {
   const score = live && hasScore(e) ? (hidden(e) ? revealBtn(e.id) : `<div class="score">${fullScore(e)}</div>${status}`) : '';
   const btn = link ? `<span class="btn">▶ Watch on ${esc(link.name)}${link.owned === null ? '?' : ''}</span>`
     : `<span class="btn off">${e.watch.options.length ? 'Not on your services · ' + esc(e.watch.options[0].name) : 'Where to watch unknown'}</span>`;
-  const inner = `<span class="emoji">${EMOJI[e.sport] || '🏟️'}</span>
+  const inner = `<span class="emoji">${icon(e.sport)}</span>
     <div class="kicker">${kicker}</div>
     <div class="big">${star(e)}${esc(e.title)}</div>
     <div class="sub">${esc([e.detail, e.league, live ? null : tf.format(d)].filter(Boolean).join(' · '))}</div>
@@ -256,7 +261,7 @@ function hero(e, now) {
 function teamTile(n, now) {
   const ev = data.events.find(e => e.id === n.id);
   const live = ev ? isLive(ev, now) : n.state === 'in';
-  const who = `<div class="who"><span>${EMOJI[n.sport] || '🏟️'}</span>${esc(n.label)}</div>`;
+  const who = `<div class="who"><span>${icon(n.sport)}</span>${esc(n.label)}</div>`;
   if (!n.start) return `<div class="glass tile off">${who}<div class="vs">${esc(n.note || 'No fixtures listed')}</div><div class="at">&nbsp;</div></div>`;
   const vs = `${n.homeAway === 'home' ? 'v' : 'at'} ${n.opponent || 'TBC'}`;
   const d = new Date(n.start);
@@ -280,7 +285,7 @@ function miniRow(e, now) {
   if (hasScore(e) && (e.state === 'post' || live)) when = hidden(e) ? revealBtn(e.id, 'Show') : shortScore(e);
   else when = e.state === 'post' ? 'Final' : live ? 'Live' : e.timeTbc ? 'TBC' : tf.format(d);
   const bits = [e.league, e.state === 'pre' && link ? link.name + (link.owned === null ? '?' : '') : null].filter(Boolean).join(' · ');
-  const body = `<div class="ic">${EMOJI[e.sport] || '🏟️'}</div>
+  const body = `<div class="ic">${icon(e.sport)}</div>
     <div class="line">${star(e)}<b>${esc(e.title)}</b>${bits ? ' · ' + esc(bits) : ''}</div>
     <div class="when${live ? ' live' : ''}">${when}</div>`;
   return link && e.state !== 'post' ? `<a class="row mini" href="${esc(link.url)}" target="_blank" rel="noopener">${body}</a>` : `<div class="row mini">${body}</div>`;
@@ -295,7 +300,7 @@ function row(e, now) {
   // Finished games: final score plus a highlights link (both behind the reveal for hidden teams).
   const tail = post ? (hidden(e) ? '' : `<div class="chips"><a class="chip link" href="${esc(highlightsUrl(e))}" target="_blank" rel="noopener">▶ Highlights</a></div>`)
     : `<div class="chips">${chips(e.watch)}</div>`;
-  const body = `<div class="ic">${EMOJI[e.sport] || '🏟️'}</div>
+  const body = `<div class="ic">${icon(e.sport)}</div>
     <div><div class="title">${star(e)}${esc(e.title)}</div>
       <div class="meta">${esc([e.detail, e.league].filter(Boolean).join(' · '))}${status}</div>
       ${e.why && !post ? `<div class="why">${esc(e.why)}</div>` : ''}${score}${tail}</div>

@@ -40,9 +40,12 @@ function channels(comp) {
   return [...new Set(out)];
 }
 
-function watchFor(chans, league, sport) {
+function watchFor(chans, league, sport, editorKeys = null) {
   const keys = [];
   for (const ch of chans) { const k = cfg.channelToService[ch]; if (k && !keys.includes(k)) keys.push(k); }
+  // Editor-chosen services (manual.json "watchKeys") replace the league fallback rule.
+  const picked = Array.isArray(editorKeys) ? editorKeys.filter(k => cfg.services[k] && !keys.includes(k)) : [];
+  keys.push(...picked);
   const verified = keys.length > 0;
   let note = null;
   if (!verified) {
@@ -55,7 +58,7 @@ function watchFor(chans, league, sport) {
   keys.sort((a, b) => rank(a) - rank(b));
   return {
     channels: chans,
-    source: verified ? 'listing' : (keys.length ? 'league-default' : 'unknown'),
+    source: picked.length && keys.length === picked.length ? 'editor' : verified ? 'listing' : (keys.length ? 'league-default' : 'unknown'),
     note,
     options: keys.map(k => ({ key: k, ...cfg.services[k] })),
   };
@@ -163,7 +166,7 @@ for (const l of cfg.candidateLeagues) for (const m of months) {
 const readJson = async (f, d) => { try { return JSON.parse(await readFile(join(ROOT, 'data', f), 'utf8')); } catch { return d; } };
 const picks = await readJson('picks.json', {});
 for (const m of await readJson('manual.json', []))
-  add({ state: 'pre', statusText: '', score: null, venue: null, team: null, hideScore: false, detail: null, ...m, watch: watchFor([], m.league, m.sport) });
+  add({ state: 'pre', statusText: '', score: null, venue: null, team: null, hideScore: false, detail: null, ...m, watch: watchFor([], m.league, m.sport, m.watchKeys) });
 const all = [...events.values()].sort((a, b) => a.start.localeCompare(b.start));
 for (const e of all) {
   const p = picks[e.id];
