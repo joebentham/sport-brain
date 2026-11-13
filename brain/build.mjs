@@ -16,7 +16,9 @@ const inWindow = (iso) => { const d = new Date(iso); return d >= from && d <= to
 const months = [...new Set([from, now, to].map(d => d.toISOString().slice(0, 7).replace('-', '')))];
 
 const problems = [];
-async function get(url) {
+const cache = new Map();
+const get = (url) => { if (!cache.has(url)) cache.set(url, fetchJson(url)); return cache.get(url); };
+async function fetchJson(url) {
   try {
     const r = await fetch(url);
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -59,6 +61,12 @@ function watchFor(chans, league, sport) {
   };
 }
 
+function linksOf(ev) {
+  const find = (rel) => (ev.links || []).find(l => l.rel?.includes(rel))?.href || null;
+  const gamecast = find('summary'), highlights = find('highlights');
+  return gamecast || highlights ? { gamecast, highlights } : null;
+}
+
 function normalize(ev, { sport, league, tier, team, feed }) {
   const comp = ev.competitions?.[0];
   if (!comp || !ev.date) return null;
@@ -81,6 +89,9 @@ function normalize(ev, { sport, league, tier, team, feed }) {
     statusText: comp.status?.summary || st.shortDetail || st.detail || '',
     score: st.state === 'pre' ? null : { home: scoreOf(home), away: scoreOf(away) },
     venue: comp.venue?.fullName || null,
+    // Stable per-game ESPN pages taken from the listing itself (no guessed URL patterns).
+    links: linksOf(ev),
+    preseason: ev.seasonType?.type === 1 || ev.season?.type === 1,
     tier, team: team || null,
     hideScore: tier === 1 && sport === 'soccer' && cfg.hideScoresFor.includes(team),
     watch: watchFor(channels(comp), lg, sport),
@@ -98,17 +109,24 @@ const add = (e) => {
   if (!best.watch.options.length && other.watch.options.length) best.watch = other.watch;
   events.set(e.id, best);
 };
+const teamEvents = new Map(); // tier 1 config entry -> every normalized event found for it, any date
+const keepTeam = (t, e) => { if (!e) return; if (!teamEvents.has(t)) teamEvents.set(t, []); teamEvents.get(t).push(e); };
 const isTeam = (ev, name) => (ev.competitions?.[0]?.competitors || []).some(c => c.team?.displayName === name);
 
 for (const [tier, list] of [[1, cfg.tier1], [2, cfg.tier2 || []]]) for (const t of list) {
   if (t.kind === 'soccerTeam') {
     for (const q of ['', '?fixture=true']) {
       const j = await get(`${BASE}/soccer/all/teams/${t.teamId}/schedule${q}`);
-      for (const ev of j?.events || []) add(normalize(ev, { sport: 'soccer', league: 'Football', tier, team: t.name }));
+      for (const ev of j?.events || []) { const e = normalize(ev, { sport: 'soccer', league: 'Football', tier, team: t.name }); add(e); if (tier === 1) keepTeam(t, e); }
     }
   } else if (t.kind === 'teamSchedule') {
-    const j = await get(`${BASE}/${t.path}/teams/${t.teamId}/schedule`);
-    for (const ev of j?.events || []) add(normalize(ev, { sport: t.path.split('/')[0], league: t.league, tier, team: t.name, feed: t.path }));
+    // Off-season: the default schedule may already be next year's regular season, so also ask for preseason games.
+    const y = now.getFullYear();
+    const qs = tier === 1 ? ['', `?season=${y}&seasontype=1`, `?season=${y + 1}&seasontype=1`] : [''];
+    for (const q of qs) {
+      const j = await get(`${BASE}/${t.path}/teams/${t.teamId}/schedule${q}`);
+      for (const ev of j?.events || []) { const e = normalize(ev, { sport: t.path.split('/')[0], league: t.league, tier, team: t.name, feed: t.path }); add(e); if (tier === 1) keepTeam(t, e); }
+    }
   } else if (t.kind === 'cricket') {
     const series = new Map((t.knownSeries || []).map(id => [id, null]));
     const panel = await get(`${BASE}/cricket/scorepanel`);
@@ -116,15 +134,17 @@ for (const [tier, list] of [[1, cfg.tier1], [2, cfg.tier2 || []]]) for (const t 
       const lg = s.leagues?.[0];
       if (lg?.id && JSON.stringify(s).includes(`"displayName":"${t.name}"`)) series.set(String(lg.id), lg.name);
     }
-    for (const [id, name] of series) for (const m of months) {
+    const years = [now.getFullYear(), now.getFullYear() + 1];
+    for (const [id, name] of series) for (const m of tier === 1 ? [...months, ...years] : months) {
       const j = await get(`${BASE}/cricket/${id}/scoreboard?dates=${m}`);
       const lname = name || j?.leagues?.[0]?.name || 'Cricket';
-      for (const ev of j?.events || []) if (isTeam(ev, t.name)) add(normalize(ev, { sport: 'cricket', league: lname, tier, team: t.name, feed: `cricket/${id}` }));
+      for (const ev of j?.events || []) if (isTeam(ev, t.name)) { const e = normalize(ev, { sport: 'cricket', league: lname, tier, team: t.name, feed: `cricket/${id}` }); add(e); if (tier === 1) keepTeam(t, e); }
     }
   } else if (t.kind === 'rugby') {
-    for (const [id, name] of Object.entries(t.leagues)) for (const m of months) {
+    const years = [now.getFullYear(), now.getFullYear() + 1];
+    for (const [id, name] of Object.entries(t.leagues)) for (const m of tier === 1 ? [...months, ...years] : months) {
       const j = await get(`${BASE}/rugby/${id}/scoreboard?dates=${m}`);
-      for (const ev of j?.events || []) if (isTeam(ev, t.name)) add(normalize(ev, { sport: 'rugby', league: name, tier, team: t.name, feed: `rugby/${id}` }));
+      for (const ev of j?.events || []) if (isTeam(ev, t.name)) { const e = normalize(ev, { sport: 'rugby', league: name, tier, team: t.name, feed: `rugby/${id}` }); add(e); if (tier === 1) keepTeam(t, e); }
     }
   } // kind "manual" (e.g. a darts player) has no feed; the daily editor adds those to data/manual.json.
 }
@@ -152,10 +172,51 @@ for (const e of all) {
   if (p.tier) { e.pick = p.tier; if (e.tier === 'candidate') e.tier = p.tier; }
 }
 
+// "My teams": the next game for each tier 1 team, however far away. Never carries a score or result.
+const GAME_HOURS = { cricket: 8, football: 3.5, baseball: 3.5, soccer: 2, rugby: 2, basketball: 2.5, hockey: 2.5 };
+const dayFmt = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'America/New_York' });
+const nextByTeam = cfg.tier1.map(t => {
+  const label = t.short || t.name;
+  const base = { team: t.name, label, sport: t.kind === 'soccerTeam' ? 'soccer' : t.kind === 'teamSchedule' ? t.path.split('/')[0] : t.kind };
+  const seen = new Set();
+  const upcoming = (teamEvents.get(t) || []).filter(e => {
+    if (seen.has(e.id) || e.state === 'post') return false;
+    seen.add(e.id);
+    return e.state === 'in' || new Date(e.start) > new Date(now.getTime() - (GAME_HOURS[e.sport] || 3) * 36e5);
+  }).sort((a, b) => a.start.localeCompare(b.start));
+  const e = upcoming[0];
+  if (!e) {
+    const note = t.offseason || 'No fixtures listed yet';
+    return { ...base, offseason: true, note, text: `${label}: ${note}` };
+  }
+  const homeIsUs = e.home === t.name;
+  const opponent = homeIsUs ? e.away : e.home;
+  const g = events.get(e.id) || e; // the board's copy may carry an editor "why" or better broadcast info
+  const out = {
+    ...base, id: e.id, league: g.league, opponent, opponentAbbr: homeIsUs ? e.awayAbbr : e.homeAbbr, homeAway: homeIsUs ? 'home' : 'away',
+    start: e.start, timeTbc: !!g.timeTbc, state: e.state === 'in' ? 'in' : 'pre', feed: e.feed, watch: g.watch, offseason: false,
+  };
+  if (e.preseason && t.kind === 'teamSchedule') {
+    const what = base.sport === 'baseball' ? 'Spring training' : 'Preseason';
+    Object.assign(out, { offseason: true, phase: what, note: `${what} from ${dayFmt.format(new Date(e.start))}` });
+  } else if (new Date(e.start) - now > 30 * 864e5) {
+    Object.assign(out, { offseason: true, phase: 'Off-season', note: `Back ${dayFmt.format(new Date(e.start))}` });
+  }
+  out.text = out.note ? `${label}: ${out.note.charAt(0).toLowerCase()}${out.note.slice(1)}` : `${label}: ${homeIsUs ? 'v' : 'at'} ${opponent}`;
+  return out;
+});
+
+// Storylines: one-sentence items written by the editor session (data/stories.json). Missing file = none.
+const rawStories = await readJson('stories.json', []);
+const stories = (Array.isArray(rawStories) ? rawStories : rawStories?.stories || rawStories?.items || [])
+  .filter(s => s && typeof s.text === 'string' && s.text.trim())
+  .map(s => ({ text: s.text.trim(), sport: s.sport || null, url: /^https?:\/\//.test(s.url || '') ? s.url : null, source: s.source || null,
+    kind: s.kind === 'event' ? 'event' : 'story', spoiler: !!s.spoiler }));
+
 await mkdir(join(ROOT, 'data'), { recursive: true });
 const shown = all.filter(e => e.tier !== 'candidate');
 const brief = await readJson('brief.json', null);
-await writeFile(join(ROOT, 'data', 'today.json'), JSON.stringify({ generatedAt: now.toISOString(), brief, events: shown, problems }, null, 1));
+await writeFile(join(ROOT, 'data', 'today.json'), JSON.stringify({ generatedAt: now.toISOString(), brief, nextByTeam, stories, events: shown, problems }, null, 1));
 await writeFile(join(ROOT, 'data', 'candidates.json'), JSON.stringify(all.filter(e => e.tier === 'candidate'), null, 1));
 
 // Calendar feed: Tier 1 plus the editor's picks. Tier 2 stays on the board only.
@@ -185,6 +246,7 @@ for (const e of shown) {
 cal.push('END:VCALENDAR');
 await writeFile(join(ROOT, 'data', 'sport-brain.ics'), cal.join('\r\n') + '\r\n');
 
-console.log(`${shown.length} shown, ${all.length - shown.length} candidates, ${calCount} in calendar, ${problems.length} fetch problems`);
+for (const n of nextByTeam) console.log(`  next: ${n.text}${n.start ? ' ' + n.start.slice(0, 16) : ''}`);
+console.log(`${stories.length} stories, ${shown.length} shown, ${all.length - shown.length} candidates, ${calCount} in calendar, ${problems.length} fetch problems`);
 for (const p of problems) console.log('  problem:', p);
 for (const e of shown) console.log(`  ${e.start.slice(0, 16)}  [${e.tier}${e.pick ? '+' + e.pick : ''}] ${e.title} (${e.league}) ${e.state} -> ${e.watch.options.map(o => o.name).join('/') || '?'}`);

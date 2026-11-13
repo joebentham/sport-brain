@@ -7,17 +7,20 @@
   "tier1": [
     {
       "name": "Arsenal",
+      "short": "Arsenal",
       "kind": "soccerTeam",
       "teamId": "359"
     },
     {
       "name": "England",
       "label": "England (football)",
+      "short": "England",
       "kind": "soccerTeam",
       "teamId": "448"
     },
     {
       "name": "New York Jets",
+      "short": "Jets",
       "kind": "teamSchedule",
       "path": "football/nfl",
       "teamId": "20",
@@ -25,6 +28,7 @@
     },
     {
       "name": "New York Mets",
+      "short": "Mets",
       "kind": "teamSchedule",
       "path": "baseball/mlb",
       "teamId": "21",
@@ -33,6 +37,7 @@
     {
       "name": "England",
       "label": "England (cricket)",
+      "short": "England",
       "kind": "cricket",
       "knownSeries": [
         "24273"
@@ -41,6 +46,7 @@
     {
       "name": "England",
       "label": "England (rugby)",
+      "short": "England",
       "kind": "rugby",
       "leagues": {
         "17567": "Nations Championship",

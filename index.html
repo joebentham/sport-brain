@@ -19,6 +19,7 @@
     --shadow: 0 10px 40px rgba(31, 38, 60, 0.10), 0 1px 2px rgba(31, 38, 60, 0.06);
     --blue: #007aff; --red: #ff3b30; --green: #1f9d55; --amber: #b25e00; --gold: #f5a300;
     --green-bg: rgba(52, 199, 89, 0.18); --amber-bg: rgba(255, 159, 10, 0.20); --grey-bg: rgba(120, 120, 128, 0.16);
+    --blue-bg: rgba(0, 122, 255, 0.12);
     --seg: rgba(120, 120, 128, 0.14); --seg-on: rgba(255, 255, 255, 0.92);
   }
   @media (prefers-color-scheme: dark) {
@@ -31,12 +32,13 @@
       --shadow: 0 12px 44px rgba(0, 0, 0, 0.45);
       --blue: #0a84ff; --red: #ff453a; --green: #30d158; --amber: #ffb340; --gold: #ffd60a;
       --green-bg: rgba(48, 209, 88, 0.18); --amber-bg: rgba(255, 159, 10, 0.20); --grey-bg: rgba(120, 120, 128, 0.26);
+      --blue-bg: rgba(10, 132, 255, 0.20);
       --seg: rgba(120, 120, 128, 0.26); --seg-on: rgba(255, 255, 255, 0.18);
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { background: var(--bg); }
-  body { margin: 0; color: var(--ink); min-height: 100vh;
+  body { margin: 0; color: var(--ink); min-height: 100vh; overflow-x: hidden;
     font: 16px/1.38 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased; }
   body::before { content: ""; position: fixed; inset: -10%; z-index: -1; pointer-events: none;
@@ -47,31 +49,47 @@
       var(--bg); }
   main { max-width: 720px; margin: 0 auto;
     padding: calc(22px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(56px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  a { color: inherit; text-decoration: none; }
 
   .glass { background: var(--glass); border: 1px solid var(--edge); border-radius: 24px; box-shadow: var(--shadow);
     -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); }
 
   header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0 4px 16px; }
-  .date { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink3); }
-  h1 { font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.022em; margin: 2px 0 0; }
-  .stamp { font-size: 12px; color: var(--ink3); padding-bottom: 6px; white-space: nowrap; }
+  h1 { font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.022em; margin: 0; }
+  .stamp { font-size: 12px; color: var(--ink3); padding-bottom: 6px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .stamp .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
 
   /* Hero: the one answer to "what should I put on?" */
-  .hero { padding: 20px; position: relative; overflow: hidden; display: block; color: inherit; text-decoration: none; }
+  .hero { padding: 20px; position: relative; overflow: hidden; display: block; }
   .hero .kicker { font-size: 13px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--blue); display: flex; align-items: center; gap: 7px; }
   .hero.live .kicker { color: var(--red); }
-  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.6); animation: pulse 1.8s infinite; }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.6); animation: pulse 1.8s infinite; flex: none; }
   @keyframes pulse { 70% { box-shadow: 0 0 0 9px rgba(255, 59, 48, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); } }
   @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
   .hero .big { font-size: 26px; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }
   .hero .sub { color: var(--ink2); font-size: 15px; margin-top: 4px; }
   .hero .why { font-size: 16px; margin-top: 10px; }
   .hero .score { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 10px; }
+  .hero .status { font-size: 14px; color: var(--ink2); margin-top: 2px; }
   .hero .foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
   .btn { display: inline-flex; align-items: center; gap: 6px; background: var(--blue); color: #fff; font-weight: 600; font-size: 15px;
     padding: 10px 18px; border-radius: 999px; }
   .btn.off { background: var(--grey-bg); color: var(--ink2); }
   .hero .emoji { position: absolute; right: -6px; top: -14px; font-size: 96px; opacity: 0.16; transform: rotate(12deg); pointer-events: none; }
+
+  /* My teams: one tile per tier 1 team */
+  .teams { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+  .tile { padding: 11px 13px 12px; border-radius: 18px; display: block; min-width: 0; }
+  a.tile:active { background: var(--glass-strong); }
+  .tile .who { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink3);
+    display: flex; align-items: center; gap: 5px; white-space: nowrap; overflow: hidden; }
+  .tile .vs { font-size: 15px; line-height: 1.25; font-weight: 600; letter-spacing: -0.01em; margin-top: 3px; overflow: hidden;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; }
+  .tile .at { font-size: 13px; color: var(--ink2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+  .tile .at.live { color: var(--red); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .tile .svc { font-size: 12px; font-weight: 600; margin-top: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink3); }
+  .tile .svc.own { color: var(--green); } .tile .svc.maybe { color: var(--amber); }
+  .tile.off .vs { color: var(--ink2); }
 
   .brief { padding: 18px 20px; margin-top: 14px; }
   .brief .label, .section { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink3); }
@@ -80,16 +98,15 @@
   .brief .label + p { margin-top: 4px; }
   .brief .label.gap { margin-top: 14px; }
 
-  .seg { display: flex; gap: 2px; padding: 3px; margin: 20px 0 0; background: var(--seg); border-radius: 12px;
+  .seg { display: flex; gap: 2px; padding: 3px; margin: 22px 0 0; background: var(--seg); border-radius: 12px;
     -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
   .seg button { flex: 1; font: inherit; font-size: 14px; font-weight: 600; color: var(--ink2); background: transparent; border: 0;
     padding: 7px 8px; border-radius: 9px; cursor: pointer; }
   .seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
 
-  .section { margin: 26px 6px 8px; display: flex; justify-content: space-between; }
+  .section { margin: 26px 6px 8px; display: flex; justify-content: space-between; gap: 10px; }
   .list { overflow: hidden; }
-  .row { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: start; padding: 13px 16px; position: relative;
-    color: inherit; text-decoration: none; }
+  .row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 13px 16px; position: relative; }
   .row + .row::before { content: ""; position: absolute; top: 0; left: 68px; right: 0; height: 1px; background: var(--hair); }
   a.row:active { background: var(--glass-strong); }
   .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: var(--grey-bg); }
@@ -105,21 +122,59 @@
   .chip.own { color: var(--green); background: var(--green-bg); }
   .chip.maybe { color: var(--amber); background: var(--amber-bg); }
   .chip.no { color: var(--ink2); background: var(--grey-bg); }
+  a.chip.link { color: var(--blue); background: var(--blue-bg); }
   .note { font-size: 12px; color: var(--ink3); }
   .when { text-align: right; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 1px; }
   .when small { display: block; font-size: 12px; font-weight: 500; color: var(--ink3); }
   .when.live { color: var(--red); }
   button.reveal { font: inherit; font-size: 13px; font-weight: 600; border: 0; background: var(--grey-bg); color: var(--ink2);
     border-radius: 999px; padding: 5px 12px; margin-top: 6px; cursor: pointer; }
+
+  /* Secondary teams: one quiet line each */
+  .row.mini { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 16px; }
+  .row.mini + .row::before, .row + .row.mini::before { left: 48px; }
+  .row.mini .ic { width: 22px; height: 22px; border-radius: 7px; font-size: 12px; background: transparent; }
+  .row.mini .line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 14px; color: var(--ink2); }
+  .row.mini .line b { font-weight: 600; color: var(--ink); }
+  .row.mini .when { font-size: 13px; font-weight: 500; color: var(--ink2); padding: 0; }
+  .row.mini .when.live { color: var(--red); font-weight: 600; }
+  .row.mini button.reveal { margin: 0; padding: 3px 10px; font-size: 12px; }
+
+  /* Later days: one summary line each, tap to open */
+  .day { margin-top: 10px; overflow: hidden; border-radius: 20px; }
+  .dayline { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    padding: 13px 16px; cursor: pointer; }
+  .dayline:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; border-radius: 20px; }
+  .dayline .dn { font-weight: 600; font-size: 15px; white-space: nowrap; }
+  .dayline .ds { font-size: 14px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dayline .dc { font-size: 13px; color: var(--ink3); font-weight: 600; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+  .chev { display: inline-block; transition: transform 0.2s; font-size: 14px; }
+  .day.open .chev { transform: rotate(90deg); }
+  .day .list { border-top: 1px solid var(--hair); }
+
+  /* Storylines */
+  .story { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 16px; position: relative; }
+  .story + .story::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--hair); }
+  a.story:active { background: var(--glass-strong); }
+  .story .txt { font-size: 15px; line-height: 1.36; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink2);
+    background: var(--grey-bg); border-radius: 6px; padding: 2px 6px; margin-right: 7px; vertical-align: 1px; }
+  .tag.event { color: var(--blue); background: var(--blue-bg); }
+  .story .go { color: var(--ink3); font-size: 17px; }
+  .story button.reveal { margin: 0; }
+
   .empty { color: var(--ink2); font-size: 15px; padding: 18px 20px; }
+  .empty.small { font-size: 14px; padding: 13px 16px; }
   .legend { color: var(--ink3); font-size: 12px; margin: 26px 6px 0; line-height: 1.6; }
-  @media (max-width: 420px) { h1 { font-size: 30px; } .hero .big { font-size: 23px; } .row { padding: 12px 14px; } }
+  @media (max-width: 560px) { .teams { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 420px) { h1 { font-size: 30px; } .hero .big { font-size: 23px; } .row { padding: 12px 14px; } .row.mini { padding: 8px 14px; }
+    .dayline { padding: 12px 14px; } .story { padding: 11px 14px; } }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <div><div class="date" id="date"></div><h1>Sport Brain</h1></div>
+    <h1 id="date"></h1>
     <span class="stamp" id="stamp"></span>
   </header>
   <div id="app"><div class="glass empty">Loading…</div></div>
@@ -129,20 +184,31 @@
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const tf = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 const df = new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+const sdf = new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+const wdf = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+const mdf = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
+const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' });
 const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-const EMOJI = { soccer: '⚽️', football: '🏈', cricket: '🏏', rugby: '🏉', darts: '🎯', basketball: '🏀', hockey: '🏒', baseball: '⚾️' };
+const EMOJI = { soccer: '⚽️', football: '🏈', cricket: '🏏', rugby: '🏉', darts: '🎯', basketball: '🏀', hockey: '🏒', baseball: '⚾️', curling: '🥌', tennis: '🎾', golf: '⛳️', f1: '🏎️', boxing: '🥊', cycling: '🚴' };
 // Rough "probably still on" lengths in hours, used when the hourly data has not caught up with a live game.
 const LEN = { cricket: 8, football: 3.5, baseball: 3.5, darts: 9, soccer: 2, rugby: 2, basketball: 2.5, hockey: 2.5 };
+const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/';
 const revealed = new Set();
 let filter = 'all';
 try { filter = localStorage.getItem('sb-filter') || 'all'; } catch {}
+let openDays = new Set();
+try { openDays = new Set(JSON.parse(sessionStorage.getItem('sb-open-days') || '[]')); } catch {}
 let data = null;
+const liveData = new Map();   // event id -> fresher state/status/score from the browser's own polling
+const feedFails = new Map();  // feed -> consecutive failures; a feed that keeps failing is left to the hourly data
+let lastPoll = 0;
 
 const isLive = (e, now) => { const d = new Date(e.start); return e.state === 'in' || (e.state === 'pre' && !e.timeTbc && d <= now && now - d < (LEN[e.sport] || 2.5) * 36e5); };
 const isMine = (e) => e.tier === 1 || e.tier === 2;
 const isPick = (e) => e.tier === 1 || e.pick || e.tier === 'marquee' || e.tier === 'wildcard';
 const rank = (e) => e.tier === 1 ? 0 : (e.pick || e.tier === 'marquee' || e.tier === 'wildcard') ? 1 : 2;
-const linkOf = (e) => e.watch.options.find(o => o.owned !== false);
+const isMini = (e) => rank(e) === 2;
+const linkOf = (e) => (e.watch?.options || []).find(o => o.owned !== false);
 const hidden = (e) => e.hideScore && !revealed.has(e.id);
 const hasScore = (e) => e.score && (e.score.home != null || e.score.away != null);
 
@@ -161,12 +227,20 @@ function chips(w) {
   }).join('') + (w.note ? `<span class="note">${esc(w.note)}</span>` : '');
 }
 const star = (e) => e.tier === 1 ? '<span class="star">★</span>' : e.tier === 2 ? '<span class="star two">☆</span>' : '';
+const revealBtn = (id, label = 'Score hidden · show') => `<button class="reveal" data-id="${esc(id)}">${esc(label)}</button>`;
+const fullScore = (e) => `${esc(e.home)} ${esc(e.score.home)} · ${esc(e.away)} ${esc(e.score.away)}`;
+const shortScore = (e) => e.awayAbbr && e.homeAbbr ? `${esc(e.awayAbbr)} ${esc(e.score.away)}–${esc(e.score.home)} ${esc(e.homeAbbr)}` : `${esc(e.score.away)}–${esc(e.score.home)}`;
+function highlightsUrl(e) {
+  if (e.links?.highlights) return e.links.highlights;
+  const d = new Date(e.start).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(`${e.home || ''} vs ${e.away || ''} highlights ${d}`.trim());
+}
 
 function hero(e, now) {
   const live = isLive(e, now), d = new Date(e.start), link = linkOf(e);
   const kicker = live ? '<span class="pulse"></span>On now' : `Next up · ${until(d, now)}`;
-  const score = live && hasScore(e) ? (hidden(e) ? `<button class="reveal" data-id="${esc(e.id)}">Score hidden · show</button>`
-    : `<div class="score">${esc(e.home)} ${esc(e.score.home)} · ${esc(e.away)} ${esc(e.score.away)}</div>`) : '';
+  const status = live && e.statusText && !hidden(e) ? `<div class="status">${esc(e.statusText)}</div>` : '';
+  const score = live && hasScore(e) ? (hidden(e) ? revealBtn(e.id) : `<div class="score">${fullScore(e)}</div>${status}`) : '';
   const btn = link ? `<span class="btn">▶ Watch on ${esc(link.name)}${link.owned === null ? '?' : ''}</span>`
     : `<span class="btn off">${e.watch.options.length ? 'Not on your services · ' + esc(e.watch.options[0].name) : 'Where to watch unknown'}</span>`;
   const inner = `<span class="emoji">${EMOJI[e.sport] || '🏟️'}</span>
@@ -179,22 +253,68 @@ function hero(e, now) {
   return link ? `<a class="${cls}" href="${esc(link.url)}" target="_blank" rel="noopener">${inner}</a>` : `<div class="${cls}">${inner}</div>`;
 }
 
-function row(e, now) {
+function teamTile(n, now) {
+  const ev = data.events.find(e => e.id === n.id);
+  const live = ev ? isLive(ev, now) : n.state === 'in';
+  const who = `<div class="who"><span>${EMOJI[n.sport] || '🏟️'}</span>${esc(n.label)}</div>`;
+  if (!n.start) return `<div class="glass tile off">${who}<div class="vs">${esc(n.note || 'No fixtures listed')}</div><div class="at">&nbsp;</div></div>`;
+  const vs = `${n.homeAway === 'home' ? 'v' : 'at'} ${n.opponent || 'TBC'}`;
+  const d = new Date(n.start);
+  // Tiles never show a score or result, so Arsenal is safe here by construction.
+  const day = dayKey(d) === dayKey(now) ? 'Today' : d - now < 6 * 864e5 ? wdf.format(d) : mdf.format(d);
+  const at = live ? `<div class="at live"><span class="pulse"></span>Live now</div>`
+    : `<div class="at">${esc(day)}${n.timeTbc ? '' : ' · ' + esc(tf.format(d))}</div>`;
+  if (n.offseason && n.phase) {
+    return `<div class="glass tile off">${who}<div class="vs">${esc(n.phase)}</div><div class="at">From ${esc(mdf.format(d))}</div><div class="svc">${esc(vs)}</div></div>`;
+  }
+  const o = (n.watch?.options || [])[0], link = (n.watch?.options || []).find(x => x.owned !== false);
+  const svc = o ? `<div class="svc ${o.owned === true ? 'own' : o.owned === null ? 'maybe' : ''}">${esc(o.owned === false ? 'Not on yours · ' + o.name : o.name + (o.owned === null ? '?' : ''))}</div>`
+    : '<div class="svc">Where to watch unknown</div>';
+  const inner = `${who}<div class="vs" title="${esc(vs)}">${esc(vs)}</div>${at}${svc}`;
+  return link ? `<a class="glass tile" href="${esc(link.url)}" target="_blank" rel="noopener">${inner}</a>` : `<div class="glass tile">${inner}</div>`;
+}
+
+function miniRow(e, now) {
   const d = new Date(e.start), live = isLive(e, now), link = linkOf(e);
-  const when = e.state === 'post' ? `Final<small>${tf.format(d)}</small>` : live ? `Live<small>${tf.format(d)}</small>` : e.timeTbc ? `TBC` : tf.format(d);
-  const score = hasScore(e) ? (hidden(e) ? `<button class="reveal" data-id="${esc(e.id)}">Score hidden · show</button>`
-    : `<div class="rowscore">${esc(e.home)} ${esc(e.score.home)} · ${esc(e.away)} ${esc(e.score.away)}</div>`) : '';
+  let when;
+  if (hasScore(e) && (e.state === 'post' || live)) when = hidden(e) ? revealBtn(e.id, 'Show') : shortScore(e);
+  else when = e.state === 'post' ? 'Final' : live ? 'Live' : e.timeTbc ? 'TBC' : tf.format(d);
+  const bits = [e.league, e.state === 'pre' && link ? link.name + (link.owned === null ? '?' : '') : null].filter(Boolean).join(' · ');
+  const body = `<div class="ic">${EMOJI[e.sport] || '🏟️'}</div>
+    <div class="line">${star(e)}<b>${esc(e.title)}</b>${bits ? ' · ' + esc(bits) : ''}</div>
+    <div class="when${live ? ' live' : ''}">${when}</div>`;
+  return link && e.state !== 'post' ? `<a class="row mini" href="${esc(link.url)}" target="_blank" rel="noopener">${body}</a>` : `<div class="row mini">${body}</div>`;
+}
+
+function row(e, now) {
+  if (isMini(e)) return miniRow(e, now);
+  const d = new Date(e.start), live = isLive(e, now), post = e.state === 'post', link = post ? null : linkOf(e);
+  const when = post ? `Final<small>${sdf.format(d)}</small>` : live ? `Live<small>${tf.format(d)}</small>` : e.timeTbc ? `TBC` : tf.format(d);
+  const score = hasScore(e) ? (hidden(e) ? revealBtn(e.id, post ? 'Result hidden · show' : 'Score hidden · show') : `<div class="rowscore">${fullScore(e)}</div>`) : '';
   const status = e.statusText && e.state !== 'pre' && !hidden(e) && !/^(FT|Final)$/i.test(e.statusText) ? ' · ' + esc(e.statusText) : '';
+  // Finished games: final score plus a highlights link (both behind the reveal for hidden teams).
+  const tail = post ? (hidden(e) ? '' : `<div class="chips"><a class="chip link" href="${esc(highlightsUrl(e))}" target="_blank" rel="noopener">▶ Highlights</a></div>`)
+    : `<div class="chips">${chips(e.watch)}</div>`;
   const body = `<div class="ic">${EMOJI[e.sport] || '🏟️'}</div>
     <div><div class="title">${star(e)}${esc(e.title)}</div>
       <div class="meta">${esc([e.detail, e.league].filter(Boolean).join(' · '))}${status}</div>
-      ${e.why ? `<div class="why">${esc(e.why)}</div>` : ''}${score}
-      <div class="chips">${chips(e.watch)}</div></div>
+      ${e.why && !post ? `<div class="why">${esc(e.why)}</div>` : ''}${score}${tail}</div>
     <div class="when${live ? ' live' : ''}">${when}</div>`;
   const cls = `row${e.tier === 1 ? ' t1' : ''}`;
   return link ? `<a class="${cls}" href="${esc(link.url)}" target="_blank" rel="noopener">${body}</a>` : `<div class="${cls}">${body}</div>`;
 }
 const list = (items, now) => `<div class="glass list">${items.map(e => row(e, now)).join('')}</div>`;
+
+function storylines(stories) {
+  if (!stories?.length) return '';
+  const items = stories.map((s, i) => {
+    const tag = s.sport ? `<span class="tag${s.kind === 'event' ? ' event' : ''}">${esc(s.sport)}</span>` : '';
+    if (s.spoiler && !revealed.has('story' + i)) return `<div class="story"><div class="txt">${tag}${revealBtn('story' + i, 'Result hidden · show')}</div></div>`;
+    const inner = `<div class="txt">${tag}${esc(s.text)}</div>${s.url ? '<span class="go">›</span>' : ''}`;
+    return s.url ? `<a class="story" href="${esc(s.url)}" target="_blank" rel="noopener"${s.source ? ` title="${esc(s.source)}"` : ''}>${inner}</a>` : `<div class="story">${inner}</div>`;
+  }).join('');
+  return `<div class="section"><span>Storylines</span></div><div class="glass list">${items}</div>`;
+}
 
 function render() {
   if (!data) return;
@@ -203,15 +323,16 @@ function render() {
   const evs = data.events;
   const live = evs.filter(e => isLive(e, now)).sort((a, b) => rank(a) - rank(b));
   const upcoming = evs.filter(e => !isLive(e, now) && e.state !== 'post' && (new Date(e.start) > now || e.timeTbc));
-  const done = evs.filter(e => e.state === 'post').reverse();
+  const done = evs.filter(e => e.state === 'post').sort((a, b) => b.start.localeCompare(a.start));
   const next = upcoming.filter(e => !e.timeTbc && rank(e) < 2)[0] || upcoming.filter(e => !e.timeTbc)[0];
-  const top = live[0] || next;
+  const top = live.find(e => rank(e) < 2) || next || live[0];
 
   let html = top ? hero(top, now) : '<div class="glass empty">Nothing on the schedule right now.</div>';
+  if (data.nextByTeam?.length) html += `<div class="teams">${data.nextByTeam.map(n => teamTile(n, now)).join('')}</div>`;
   const b = data.brief;
   if (b) {
     const recaps = (b.recaps || []).map((r, i) => r.spoiler && !revealed.has('brief' + i)
-      ? `<p><button class="reveal" data-id="brief${i}">${esc(r.label || 'Result')} hidden · show</button></p>` : `<p>${esc(r.text)}</p>`).join('');
+      ? `<p>${revealBtn('brief' + i, (r.label || 'Result') + ' hidden · show')}</p>` : `<p>${esc(r.text)}</p>`).join('');
     html += `<div class="glass brief"><div class="label">Morning brief</div><div class="hl">${esc(b.headline)}</div>`
       + (recaps ? `<div class="label gap">Recaps</div>${recaps}` : '')
       + (b.lookAhead ? `<div class="label gap">Coming up</div><p>${esc(b.lookAhead)}</p>` : '') + `</div>`;
@@ -219,39 +340,109 @@ function render() {
   html += `<div class="seg" role="group" aria-label="Filter">${[['all', 'Everything'], ['mine', 'My teams'], ['picks', 'Top picks']]
     .map(([k, l]) => `<button data-filter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div>`;
 
-  const otherLive = live.filter(e => e !== top && keep(e));
-  if (otherLive.length) html += `<div class="section"><span>Also on now</span></div>` + list(otherLive, now);
+  // Today, fully open: everything live (bar the hero) and everything still to come today, in time order.
+  const today = dayKey(now), tomorrow = dayKey(new Date(now.getTime() + 864e5));
+  const todays = [...live.filter(e => e !== top), ...upcoming.filter(e => e !== top && dayKey(new Date(e.start)) === today)]
+    .filter(keep).sort((a, b) => a.start.localeCompare(b.start));
+  html += `<div class="section"><span>Today</span><span>${esc(df.format(now))}</span></div>`
+    + (todays.length ? list(todays, now) : `<div class="glass empty small">Nothing else today${filter === 'all' ? '' : ' in this filter'}.</div>`);
+
+  // Later days: one tappable summary line each.
   const groups = new Map();
-  for (const e of upcoming.filter(e => e !== top && keep(e))) {
+  for (const e of upcoming.filter(e => e !== top && keep(e) && dayKey(new Date(e.start)) !== today)) {
     const d = new Date(e.start), k = dayKey(d);
     if (!groups.has(k)) groups.set(k, { d, items: [] });
     groups.get(k).items.push(e);
   }
-  const today = dayKey(now), tomorrow = dayKey(new Date(now.getTime() + 864e5));
-  for (const [k, g] of groups) {
-    const name = k === today ? 'Later today' : k === tomorrow ? 'Tomorrow' : df.format(g.d);
-    html += `<div class="section"><span>${esc(name)}</span><span>${k === today || k === tomorrow ? esc(df.format(g.d)) : ''}</span></div>` + list(g.items, now);
+  if (groups.size) {
+    html += `<div class="section"><span>Coming up</span></div>`;
+    for (const [k, g] of groups) {
+      const open = openDays.has(k);
+      const name = k === tomorrow ? 'Tomorrow' : sdf.format(g.d);
+      const best = [...g.items].sort((a, b) => rank(a) - rank(b) || a.start.localeCompare(b.start));
+      const summary = best.slice(0, 3).map(e => (e.tier === 1 ? '★ ' : '') + e.title).join(' · ');
+      html += `<div class="glass day${open ? ' open' : ''}"><button class="dayline" data-day="${k}" aria-expanded="${open}">
+        <span class="dn">${esc(name)}</span><span class="ds">${esc(summary)}</span>
+        <span class="dc">${g.items.length}<span class="chev">›</span></span></button>`
+        + (open ? `<div class="list">${g.items.map(e => row(e, now)).join('')}</div>` : '') + `</div>`;
+    }
   }
+
+  html += storylines(data.stories);
   const res = done.filter(keep);
   if (res.length) html += `<div class="section"><span>Results</span></div>` + list(res, now);
-  if (!groups.size && !otherLive.length && !res.length) html += `<div class="glass empty" style="margin-top:14px">Nothing else matches this filter.</div>`;
 
   document.getElementById('app').innerHTML = html;
   document.getElementById('date').textContent = df.format(now);
-  document.getElementById('stamp').textContent = 'Updated ' + tf.format(new Date(data.generatedAt));
+  const polled = lastPoll && now - lastPoll < 90e3;
+  document.getElementById('stamp').innerHTML = polled ? '<span class="dot"></span>Live scores' : 'Updated ' + esc(tf.format(new Date(data.generatedAt)));
 }
+
 document.addEventListener('click', (ev) => {
   const r = ev.target.closest('button.reveal');
   if (r) { ev.preventDefault(); revealed.add(r.dataset.id); render(); return; }
   const f = ev.target.closest('button[data-filter]');
-  if (f) { filter = f.dataset.filter; try { localStorage.setItem('sb-filter', filter); } catch {} render(); }
+  if (f) { filter = f.dataset.filter; try { localStorage.setItem('sb-filter', filter); } catch {} render(); return; }
+  const dl = ev.target.closest('button.dayline');
+  if (dl) {
+    const k = dl.dataset.day;
+    openDays.has(k) ? openDays.delete(k) : openDays.add(k);
+    try { sessionStorage.setItem('sb-open-days', JSON.stringify([...openDays])); } catch {}
+    render();
+  }
 });
+
+// ---- Live scores: poll ESPN scoreboards straight from the browser while anything is on or about to start.
+const espnId = (e) => e.id.slice(e.id.indexOf('-') + 1);
+const scoreOf = (c) => c?.score == null ? null : (typeof c.score === 'object' ? c.score.displayValue : String(c.score));
+function wantsPoll(e, now) {
+  if (!e.feed || e.timeTbc || e.state === 'post' || (feedFails.get(e.feed) || 0) >= 3) return false;
+  const d = new Date(e.start);
+  return e.state === 'in' || (d - now <= 10 * 6e4 && now - d < (LEN[e.sport] || 2.5) * 36e5);
+}
+async function board(feed, q) {
+  const r = await fetch(SCOREBOARD + feed + '/scoreboard' + q, { cache: 'no-store' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  const j = await r.json();
+  return new Map((j.events || []).map(ev => [String(ev.id), ev]));
+}
+function fromBoard(ev) {
+  const comp = ev.competitions?.[0];
+  if (!comp) return null;
+  const cs = comp.competitors || [];
+  const home = cs.find(c => c.homeAway === 'home') || cs[0], away = cs.find(c => c.homeAway === 'away') || cs[1];
+  const st = comp.status?.type || ev.status?.type || {};
+  const state = st.state || 'pre';
+  return { state, statusText: comp.status?.summary || st.shortDetail || st.detail || '', score: state === 'pre' ? null : { home: scoreOf(home), away: scoreOf(away) } };
+}
+const applyLive = () => { if (data) for (const e of data.events) if (liveData.has(e.id)) Object.assign(e, liveData.get(e.id)); };
+async function poll() {
+  if (!data || document.hidden) return;
+  const now = new Date();
+  const byFeed = new Map();
+  for (const e of data.events) if (wantsPoll(e, now)) (byFeed.get(e.feed) || byFeed.set(e.feed, []).get(e.feed)).push(e);
+  if (!byFeed.size) return;
+  let got = false;
+  await Promise.all([...byFeed].map(async ([feed, evs]) => {
+    try {
+      let found = await board(feed, '');
+      // The default board is "today" in ESPN's eyes; ask for the game's own date if it is not there (e.g. overnight cricket).
+      for (const day of new Set(evs.filter(e => !found.has(espnId(e))).map(e => etDate.format(new Date(e.start)).replace(/-/g, ''))))
+        found = new Map([...found, ...await board(feed, '?dates=' + day)]);
+      for (const e of evs) { const ev = found.get(espnId(e)); const u = ev && fromBoard(ev); if (u) { liveData.set(e.id, u); got = true; } }
+      feedFails.delete(feed);
+    } catch { feedFails.set(feed, (feedFails.get(feed) || 0) + 1); }
+  }));
+  if (got) { lastPoll = Date.now(); applyLive(); render(); }
+}
+
 async function load() {
-  try { data = await (await fetch('data/today.json', { cache: 'no-store' })).json(); render(); }
+  try { data = await (await fetch('data/today.json', { cache: 'no-store' })).json(); applyLive(); render(); }
   catch (e) { if (!data) document.getElementById('app').innerHTML = '<div class="glass empty">Could not load the schedule.</div>'; }
 }
-load(); setInterval(load, 60000); setInterval(render, 30000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+load().then(poll);
+setInterval(load, 5 * 60000); setInterval(poll, 30000); setInterval(render, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) load().then(poll); });
 </script>
 </body>
 </html>
