@@ -21,6 +21,7 @@
     --green-bg: rgba(52, 199, 89, 0.18); --amber-bg: rgba(255, 159, 10, 0.20); --grey-bg: rgba(120, 120, 128, 0.16);
     --blue-bg: rgba(0, 122, 255, 0.12);
     --seg: rgba(120, 120, 128, 0.14); --seg-on: rgba(255, 255, 255, 0.92);
+    --bar: rgba(246, 247, 251, 0.78);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -34,6 +35,7 @@
       --green-bg: rgba(48, 209, 88, 0.18); --amber-bg: rgba(255, 159, 10, 0.20); --grey-bg: rgba(120, 120, 128, 0.26);
       --blue-bg: rgba(10, 132, 255, 0.20);
       --seg: rgba(120, 120, 128, 0.26); --seg-on: rgba(255, 255, 255, 0.18);
+      --bar: rgba(22, 24, 33, 0.74);
     }
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -55,8 +57,17 @@
     -webkit-backdrop-filter: blur(28px) saturate(180%); backdrop-filter: blur(28px) saturate(180%); }
 
   header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 0 4px 16px; }
-  h1 { font-size: 34px; line-height: 1.1; font-weight: 700; letter-spacing: -0.022em; margin: 0; }
-  .stamp { font-size: 12px; color: var(--ink3); padding-bottom: 6px; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .date { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink3); }
+  h1 { font-size: 30px; line-height: 1.1; font-weight: 700; letter-spacing: -0.022em; margin: 2px 0 0; }
+  .hdr-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .stamp { font-size: 12px; color: var(--ink3); white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+
+  /* Page navigation: a segmented control in the header on wide screens, a tab bar at the bottom on phones */
+  .tabs { display: flex; gap: 2px; padding: 3px; background: var(--seg); border-radius: 12px;
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  .tabs a { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink2); padding: 6px 12px; border-radius: 9px; }
+  .tabs svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .tabs a[aria-current="page"] { background: var(--seg-on); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }
   .stamp .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
 
   /* Hero: the one answer to "what should I put on?" */
@@ -140,18 +151,6 @@
   .row.mini .when.live { color: var(--red); font-weight: 600; }
   .row.mini button.reveal { margin: 0; padding: 3px 10px; font-size: 12px; }
 
-  /* Later days: one summary line each, tap to open */
-  .day { margin-top: 10px; overflow: hidden; border-radius: 20px; }
-  .dayline { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center;
-    padding: 13px 16px; cursor: pointer; }
-  .dayline:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; border-radius: 20px; }
-  .dayline .dn { font-weight: 600; font-size: 15px; white-space: nowrap; }
-  .dayline .ds { font-size: 14px; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .dayline .dc { font-size: 13px; color: var(--ink3); font-weight: 600; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
-  .chev { display: inline-block; transition: transform 0.2s; font-size: 14px; }
-  .day.open .chev { transform: rotate(90deg); }
-  .day .list { border-top: 1px solid var(--hair); }
-
   /* Storylines */
   .story { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 11px 16px; position: relative; }
   .story + .story::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; height: 1px; background: var(--hair); }
@@ -167,18 +166,53 @@
   .empty.small { font-size: 14px; padding: 13px 16px; }
   .legend { color: var(--ink3); font-size: 12px; margin: 26px 6px 0; line-height: 1.6; }
   @media (max-width: 560px) { .teams { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (max-width: 420px) { h1 { font-size: 30px; } .hero .big { font-size: 23px; } .row { padding: 12px 14px; } .row.mini { padding: 8px 14px; }
-    .dayline { padding: 12px 14px; } .story { padding: 11px 14px; } }
+  @media (max-width: 420px) { h1 { font-size: 26px; } .hero .big { font-size: 23px; } .row { padding: 12px 14px; } .row.mini { padding: 8px 14px; }
+    .story { padding: 11px 14px; } }
+
+  .section a { color: var(--blue); text-transform: none; letter-spacing: 0; font-size: 14px; }
+  .story .src { font-size: 12px; color: var(--ink3); margin-top: 3px; }
+
+  /* Calendar: a strip of days, then the chosen day's agenda */
+  .strip { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px 2px 4px; margin: 14px -2px 0; position: relative; }
+  .strip::-webkit-scrollbar { display: none; }
+  .dbtn { all: unset; box-sizing: border-box; flex: 1 0 56px; text-align: center; padding: 8px 4px 8px; border-radius: 16px; cursor: pointer;
+    background: var(--glass); border: 1px solid var(--edge); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+  .dbtn:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+  .dbtn .wd { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink3); }
+  .dbtn .dn { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .dbtn.today .dn { color: var(--blue); }
+  .dbtn .dots { display: flex; justify-content: center; gap: 3px; height: 5px; margin-top: 4px; }
+  .dbtn .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--ink3); }
+  .dbtn .dots i.g { background: var(--gold); } .dbtn .dots i.b { background: var(--blue); }
+  .dbtn[aria-pressed="true"] { background: var(--blue); border-color: transparent; }
+  .dbtn[aria-pressed="true"] .wd, .dbtn[aria-pressed="true"] .dn { color: #fff; }
+  .dbtn[aria-pressed="true"] .dots i { background: rgba(255, 255, 255, 0.85); }
+
+  @media (max-width: 700px) {
+    .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; border-radius: 0; justify-content: space-around; gap: 0;
+      padding: 6px max(8px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      background: var(--bar); border-top: 1px solid var(--hair); -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%); }
+    .tabs a { flex: 1; flex-direction: column; gap: 2px; font-size: 11px; font-weight: 600; padding: 3px 4px; color: var(--ink3); }
+    .tabs a[aria-current="page"] { background: transparent; box-shadow: none; color: var(--blue); }
+    .tabs svg { width: 25px; height: 25px; }
+    main { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+  }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1 id="date"></h1>
-    <span class="stamp" id="stamp"></span>
+    <div><div class="date" id="date"></div><h1 id="ptitle">Today</h1></div>
+    <div class="hdr-right">
+      <nav class="tabs" aria-label="Pages">
+        <a href="#today" data-page="today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7V20a1 1 0 0 1-1 1H15v-6H9v6H4.5a1 1 0 0 1-1-1z"/></svg>Today</a>
+        <a href="#calendar" data-page="calendar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Calendar</a>
+        <a href="#stories" data-page="stories"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="3"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg>Storylines</a>
+      </nav>
+      <span class="stamp" id="stamp"></span>
+    </div>
   </header>
   <div id="app"><div class="glass empty">Loading…</div></div>
-  <p class="legend">★ your teams · ☆ secondary teams<br>Green: on a service you have · Amber: unconfirmed · Grey: not on your services</p>
 </main>
 <script>
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -201,8 +235,9 @@ const SCOREBOARD = 'https://site.api.espn.com/apis/site/v2/sports/';
 const revealed = new Set();
 let filter = 'all';
 try { filter = localStorage.getItem('sb-filter') || 'all'; } catch {}
-let openDays = new Set();
-try { openDays = new Set(JSON.parse(sessionStorage.getItem('sb-open-days') || '[]')); } catch {}
+const PAGES = { today: 'Today', calendar: 'Calendar', stories: 'Storylines' };
+const pageOf = () => { const h = location.hash.slice(1); return PAGES[h] ? h : 'today'; };
+let calDay = null; // chosen calendar day; starts on today each visit
 let data = null;
 const liveData = new Map();   // event id -> fresher state/status/score from the browser's own polling
 const feedFails = new Map();  // feed -> consecutive failures; a feed that keeps failing is left to the hourly data
@@ -310,30 +345,46 @@ function row(e, now) {
 }
 const list = (items, now) => `<div class="glass list">${items.map(e => row(e, now)).join('')}</div>`;
 
-function storylines(stories) {
-  if (!stories?.length) return '';
-  const items = stories.map((s, i) => {
+// Takes [story, index] pairs; the index keys the reveal state, so it must be the story's position in data.stories.
+function storylines(pairs, { sources = false } = {}) {
+  return pairs.map(([s, i]) => {
     const tag = s.sport ? `<span class="tag${s.kind === 'event' ? ' event' : ''}">${esc(s.sport)}</span>` : '';
     if (s.spoiler && !revealed.has('story' + i)) return `<div class="story"><div class="txt">${tag}${revealBtn('story' + i, 'Result hidden · show')}</div></div>`;
-    const inner = `<div class="txt">${tag}${esc(s.text)}</div>${s.url ? '<span class="go">›</span>' : ''}`;
+    const src = sources && s.source ? `<div class="src">${esc(s.source)}</div>` : '';
+    const inner = `<div><div class="txt">${tag}${esc(s.text)}</div>${src}</div>${s.url ? '<span class="go">›</span>' : ''}`;
     return s.url ? `<a class="story" href="${esc(s.url)}" target="_blank" rel="noopener"${s.source ? ` title="${esc(s.source)}"` : ''}>${inner}</a>` : `<div class="story">${inner}</div>`;
   }).join('');
-  return `<div class="section"><span>Storylines</span></div><div class="glass list">${items}</div>`;
 }
+const section = (left, right = '') => `<div class="section"><span>${left}</span>${right ? `<span>${right}</span>` : ''}</div>`;
+const keep = (e) => filter === 'mine' ? isMine(e) : filter === 'picks' ? isPick(e) : true;
 
-function render() {
-  if (!data) return;
-  const now = new Date();
-  const keep = (e) => filter === 'mine' ? isMine(e) : filter === 'picks' ? isPick(e) : true;
+function buckets(now) {
   const evs = data.events;
   const live = evs.filter(e => isLive(e, now)).sort((a, b) => rank(a) - rank(b));
   const upcoming = evs.filter(e => !isLive(e, now) && e.state !== 'post' && (new Date(e.start) > now || e.timeTbc));
   const done = evs.filter(e => e.state === 'post').sort((a, b) => b.start.localeCompare(a.start));
   const next = upcoming.filter(e => !e.timeTbc && rank(e) < 2)[0] || upcoming.filter(e => !e.timeTbc)[0];
-  const top = live.find(e => rank(e) < 2) || next || live[0];
+  return { live, upcoming, done, top: live.find(e => rank(e) < 2) || next || live[0] };
+}
 
+// Home: only what you want at your fingertips.
+function pageToday(now) {
+  const { live, upcoming, done, top } = buckets(now);
+  const today = dayKey(now);
   let html = top ? hero(top, now) : '<div class="glass empty">Nothing on the schedule right now.</div>';
   if (data.nextByTeam?.length) html += `<div class="teams">${data.nextByTeam.map(n => teamTile(n, now)).join('')}</div>`;
+
+  const todays = [...live.filter(e => e !== top), ...upcoming.filter(e => e !== top && dayKey(new Date(e.start)) === today)]
+    .sort((a, b) => a.start.localeCompare(b.start));
+  html += section('On today', `<a href="#calendar">Calendar ›</a>`)
+    + (todays.length ? list(todays, now) : `<div class="glass empty small">Nothing else today.</div>`);
+
+  // Relevant results: your teams and the editor's picks from roughly the last day and a half.
+  const recent = done.filter(e => rank(e) < 2 && now - new Date(e.start) < 36 * 36e5);
+  if (recent.length) html += section('Latest results') + list(recent, now);
+
+  if (data.stories?.length) html += section('Top storylines', `<a href="#stories">See all ›</a>`) + `<div class="glass list">${storylines(data.stories.slice(0, 3).map((s, i) => [s, i]))}</div>`;
+
   const b = data.brief;
   if (b) {
     const recaps = (b.recaps || []).map((r, i) => r.spoiler && !revealed.has('brief' + i)
@@ -342,59 +393,76 @@ function render() {
       + (recaps ? `<div class="label gap">Recaps</div>${recaps}` : '')
       + (b.lookAhead ? `<div class="label gap">Coming up</div><p>${esc(b.lookAhead)}</p>` : '') + `</div>`;
   }
-  html += `<div class="seg" role="group" aria-label="Filter">${[['all', 'Everything'], ['mine', 'My teams'], ['picks', 'Top picks']]
+  return html;
+}
+
+// Calendar: a strip of days (results behind, fixtures ahead), then the chosen day in full.
+function pageCalendar(now) {
+  const evs = data.events.filter(keep);
+  const today = dayKey(now);
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const times = data.events.map(e => new Date(e.start).getTime());
+  let d = startOfDay(new Date(Math.min(now.getTime(), ...times)));
+  const last = startOfDay(new Date(Math.max(now.getTime(), ...times)));
+  const days = [];
+  for (; d <= last; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1)) days.push(d);
+  const byDay = new Map(days.map(x => [dayKey(x), []]));
+  for (const e of evs) byDay.get(dayKey(new Date(e.start)))?.push(e);
+  if (!calDay || !byDay.has(calDay)) calDay = today;
+
+  let html = `<div class="seg" role="group" aria-label="Filter" style="margin-top:0">${[['all', 'Everything'], ['mine', 'My teams'], ['picks', 'Top picks']]
     .map(([k, l]) => `<button data-filter="${k}" aria-pressed="${filter === k}">${l}</button>`).join('')}</div>`;
+  html += `<div class="strip" role="group" aria-label="Days">${days.map(x => {
+    const k = dayKey(x), items = byDay.get(k);
+    const dots = [items.some(e => e.tier === 1) && 'g', items.some(e => rank(e) === 1) && 'b', items.some(e => rank(e) === 2) && ''].filter(v => v !== false);
+    return `<button class="dbtn${k === today ? ' today' : ''}" data-day="${k}" aria-pressed="${k === calDay}" aria-label="${esc(df.format(x))}, ${items.length} events">
+      <div class="wd">${esc(k === today ? 'Today' : wdf.format(x))}</div><div class="dn">${x.getDate()}</div>
+      <div class="dots">${dots.map(c => `<i class="${c}"></i>`).join('')}</div></button>`;
+  }).join('')}</div>`;
 
-  // Today, fully open: everything live (bar the hero) and everything still to come today, in time order.
-  const today = dayKey(now), tomorrow = dayKey(new Date(now.getTime() + 864e5));
-  const todays = [...live.filter(e => e !== top), ...upcoming.filter(e => e !== top && dayKey(new Date(e.start)) === today)]
-    .filter(keep).sort((a, b) => a.start.localeCompare(b.start));
-  html += `<div class="section"><span>Today</span><span>${esc(df.format(now))}</span></div>`
-    + (todays.length ? list(todays, now) : `<div class="glass empty small">Nothing else today${filter === 'all' ? '' : ' in this filter'}.</div>`);
+  const sel = days.find(x => dayKey(x) === calDay);
+  const items = [...byDay.get(calDay)].sort((a, b) => a.start.localeCompare(b.start));
+  const past = sel < startOfDay(now);
+  html += section(esc(df.format(sel)), calDay === today ? 'Today' : past ? 'Results' : '')
+    + (items.length ? list(items, now) : `<div class="glass empty small">Nothing${filter === 'all' ? '' : ' in this filter'} on this day.</div>`);
+  html += `<p class="legend">★ your teams · ☆ secondary teams<br>Green: on a service you have · Amber: unconfirmed · Grey: not on your services</p>`;
+  return html;
+}
 
-  // Later days: one tappable summary line each.
-  const groups = new Map();
-  for (const e of upcoming.filter(e => e !== top && keep(e) && dayKey(new Date(e.start)) !== today)) {
-    const d = new Date(e.start), k = dayKey(d);
-    if (!groups.has(k)) groups.set(k, { d, items: [] });
-    groups.get(k).items.push(e);
-  }
-  if (groups.size) {
-    html += `<div class="section"><span>Coming up</span></div>`;
-    for (const [k, g] of groups) {
-      const open = openDays.has(k);
-      const name = k === tomorrow ? 'Tomorrow' : sdf.format(g.d);
-      const best = [...g.items].sort((a, b) => rank(a) - rank(b) || a.start.localeCompare(b.start));
-      const summary = best.slice(0, 3).map(e => (e.tier === 1 ? '★ ' : '') + e.title).join(' · ');
-      html += `<div class="glass day${open ? ' open' : ''}"><button class="dayline" data-day="${k}" aria-expanded="${open}">
-        <span class="dn">${esc(name)}</span><span class="ds">${esc(summary)}</span>
-        <span class="dc">${g.items.length}<span class="chev">›</span></span></button>`
-        + (open ? `<div class="list">${g.items.map(e => row(e, now)).join('')}</div>` : '') + `</div>`;
-    }
-  }
+function pageStories() {
+  const st = data.stories || [];
+  if (!st.length) return '<div class="glass empty">No storylines today.</div>';
+  const pairs = st.map((s, i) => [s, i]);
+  const block = (rows) => `<div class="glass list">${storylines(rows, { sources: true })}</div>`;
+  const events = pairs.filter(([s]) => s.kind === 'event'), stories = pairs.filter(([s]) => s.kind !== 'event');
+  let html = '';
+  if (stories.length) html += section('Stories') + block(stories);
+  if (events.length) html += section('Worth knowing about') + block(events);
+  return html;
+}
 
-  html += storylines(data.stories);
-  const res = done.filter(keep);
-  if (res.length) html += `<div class="section"><span>Results</span></div>` + list(res, now);
-
-  document.getElementById('app').innerHTML = html;
+function render() {
+  if (!data) return;
+  const now = new Date(), page = pageOf();
+  document.getElementById('app').innerHTML = page === 'calendar' ? pageCalendar(now) : page === 'stories' ? pageStories(now) : pageToday(now);
   document.getElementById('date').textContent = df.format(now);
+  document.getElementById('ptitle').textContent = PAGES[page];
+  document.title = page === 'today' ? 'Sport Brain' : `${PAGES[page]} · Sport Brain`;
+  for (const a of document.querySelectorAll('.tabs a')) if (a.dataset.page === page) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   const polled = lastPoll && now - lastPoll < 90e3;
   document.getElementById('stamp').innerHTML = polled ? '<span class="dot"></span>Live scores' : 'Updated ' + esc(tf.format(new Date(data.generatedAt)));
+  const strip = document.querySelector('.strip'), on = strip?.querySelector('[aria-pressed="true"]');
+  if (strip && on) strip.scrollLeft = on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2;
 }
+window.addEventListener('hashchange', () => { render(); window.scrollTo(0, 0); });
 
 document.addEventListener('click', (ev) => {
   const r = ev.target.closest('button.reveal');
   if (r) { ev.preventDefault(); revealed.add(r.dataset.id); render(); return; }
   const f = ev.target.closest('button[data-filter]');
   if (f) { filter = f.dataset.filter; try { localStorage.setItem('sb-filter', filter); } catch {} render(); return; }
-  const dl = ev.target.closest('button.dayline');
-  if (dl) {
-    const k = dl.dataset.day;
-    openDays.has(k) ? openDays.delete(k) : openDays.add(k);
-    try { sessionStorage.setItem('sb-open-days', JSON.stringify([...openDays])); } catch {}
-    render();
-  }
+  const dd = ev.target.closest('button.dbtn');
+  if (dd) { calDay = dd.dataset.day; render(); }
 });
 
 // ---- Live scores: poll ESPN scoreboards straight from the browser while anything is on or about to start.
