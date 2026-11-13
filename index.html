@@ -88,16 +88,7 @@
   .btn.off { background: var(--grey-bg); color: var(--ink2); }
   .hero .emoji { position: absolute; right: -6px; top: -14px; font-size: 96px; opacity: 0.16; transform: rotate(12deg); pointer-events: none; }
 
-  .brief { padding: 18px 20px; margin-bottom: 14px; position: relative; }
-  .brief .close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; border-radius: 50%; border: 0; cursor: pointer;
-    background: var(--grey-bg); color: var(--ink2); font: 600 13px/30px -apple-system, system-ui, sans-serif; padding: 0; text-align: center; }
-  .brief .close:hover { color: var(--ink); }
-  .brief .hl { padding-right: 28px; }
-  .brief .label, .section { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink3); }
-  .brief .hl { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin-top: 6px; }
-  .brief p { margin: 8px 0 0; font-size: 15px; color: var(--ink2); }
-  .brief .label + p { margin-top: 4px; }
-  .brief .label.gap { margin-top: 14px; }
+  .section { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink3); }
 
   .seg { display: flex; gap: 2px; padding: 3px; margin: 22px 0 0; background: var(--seg); border-radius: 12px;
     -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
@@ -225,8 +216,6 @@ let filter = 'all';
 try { filter = localStorage.getItem('sb-filter') || 'all'; } catch {}
 const PAGES = { today: 'Today', calendar: 'Calendar', stories: 'Storylines' };
 const pageOf = () => { const h = location.hash.slice(1); return PAGES[h] ? h : 'today'; };
-const briefKey = (b) => b.date || b.headline || '';
-const briefClosed = (b) => { try { return localStorage.getItem('sb-brief-closed') === briefKey(b); } catch { return false; } };
 let calDay = null; // chosen calendar day; starts on today each visit
 let data = null;
 const liveData = new Map();   // event id -> fresher state/status/score from the browser's own polling
@@ -341,16 +330,6 @@ function pageToday(now) {
   const { live, upcoming, done, top } = buckets(now);
   const today = dayKey(now);
   let html = '';
-  // Morning brief sits on top until closed; closing it hides that day's brief only, so tomorrow's comes back.
-  const b = data.brief;
-  if (b && !briefClosed(b)) {
-    const recaps = (b.recaps || []).map((r, i) => r.spoiler && !revealed.has('brief' + i)
-      ? `<p>${revealBtn('brief' + i, (r.label || 'Result') + ' hidden · show')}</p>` : `<p>${esc(r.text)}</p>`).join('');
-    html += `<div class="glass brief"><button class="close" data-close-brief aria-label="Close morning brief">✕</button>`
-      + `<div class="label">Morning brief</div><div class="hl">${esc(b.headline)}</div>`
-      + (recaps ? `<div class="label gap">Recaps</div>${recaps}` : '')
-      + (b.lookAhead ? `<div class="label gap">Coming up</div><p>${esc(b.lookAhead)}</p>` : '') + `</div>`;
-  }
   html += top ? hero(top, now) : '<div class="glass empty">Nothing on the schedule right now.</div>';
 
   const todays = [...live.filter(e => e !== top), ...upcoming.filter(e => e !== top && dayKey(new Date(e.start)) === today)]
@@ -432,7 +411,6 @@ document.addEventListener('click', (ev) => {
   if (r) { ev.preventDefault(); revealed.add(r.dataset.id); render(); return; }
   const f = ev.target.closest('button[data-filter]');
   if (f) { filter = f.dataset.filter; try { localStorage.setItem('sb-filter', filter); } catch {} render(); return; }
-  if (ev.target.closest('[data-close-brief]')) { try { localStorage.setItem('sb-brief-closed', briefKey(data.brief)); } catch {} render(); return; }
   const dd = ev.target.closest('button.dbtn');
   if (dd) { calDay = dd.dataset.day; render(); }
 });
